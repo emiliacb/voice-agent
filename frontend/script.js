@@ -1,56 +1,60 @@
 /** Config */
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_BASE_URL = 'http://localhost:8080';
 
 /** DOM Elements */
-const audio = document.getElementById('audio');
-const startButton = document.getElementById('start');
-const audioFileInput = document.getElementById('audioFile');
+let audio, startButton, audioFileInput, mouthElement;
 
 /** State */
 const state = new Proxy({
     animation: [],
-    currentCue: null,
-    previousCue: null,
+    currentCue: 'X',
+    previousCue: 'X',
     isPlaying: false,
-    mouthElement: null,
     audioFile: null
 }, {
     set(target, prop, value) {
-        target[prop] = value;
+        try {
+            target[prop] = value;
 
-        if (prop === 'isPlaying') {
-            // Update start button text
-            startButton.textContent = target.isPlaying ? 'Pause' : 'Start';
-        }
+            if (prop === 'audioFile') {
+                startButton.disabled = !value;
+            }
 
-        if (prop === 'currentCue' && target.mouthElement) {
-            // Remove previous cue class
-            if (target.previousCue) {
-                target.mouthElement.classList.remove(`cue_${target.previousCue}`);
+            if (prop === 'isPlaying') {
+                // Update start button text
+                startButton.textContent = target.isPlaying ? 'Pause' : 'Start';
+            }
+
+            if (prop === 'currentCue' && mouthElement) {
+                // Remove previous cue class
+                if (target.previousCue) {
+                    mouthElement.classList.remove(`cue_${target.previousCue}`);
+                }
+                
+                // Idle class
+                if (!target.currentCue) {
+                    mouthElement.classList.add('cue_X');
+                }
+
+                // New cue class
+                if (target.currentCue) {
+                        mouthElement.classList.add(`cue_${target.currentCue}`);
+                }
             }
             
-            // Idle class
-            if (!target.currentCue) {
-                target.mouthElement.classList.add('cue_X');
-            }
-
-            // New cue class
-            if (target.currentCue) {
-                target.mouthElement.classList.add(`cue_${target.currentCue}`);
-            }
-        }
-
-        if (prop === 'audioFile') {
-            startButton.disabled = !value;
+            return true;
+        } catch (error) {
+            console.error('Error setting state:', error);
+            return false;
         }
     }
 });
 
-function initializeMouth() {
-    state.mouthElement = document.querySelector('.mouth');
-    if (!state.mouthElement) {
-        throw new Error('Mouth element not found');
-    }
+function initialize() {
+    audio = document.getElementById('audio');
+    startButton = document.getElementById('start');
+    audioFileInput = document.getElementById('audioFile');
+    mouthElement = document.querySelector('.mouth');
 }
 
 async function processAudioFile(file) {
@@ -58,13 +62,10 @@ async function processAudioFile(file) {
         const formData = new FormData();
         formData.append('audio', file);
 
-        const response = await fetch(`${BACKEND_URL}/lipsync`, {
+        const response = await fetch(`${BACKEND_BASE_URL}/api/lipsync`, {
             method: 'POST',
             body: formData,
             credentials: 'include',
-            headers: {
-                // Don't set Content-Type header, let the browser set it with the boundary
-            }
         });
 
         if (!response.ok) {
@@ -150,7 +151,7 @@ async function handleStart() {
 }
 
 async function main() {
-    initializeMouth();
+    initialize();
 
     // Event listeners
     audioFileInput.addEventListener('change', handleFileSelect);
@@ -158,4 +159,4 @@ async function main() {
     audio.addEventListener('ended', stopAnimation);
 }
 
-main();
+document.addEventListener('DOMContentLoaded', main);

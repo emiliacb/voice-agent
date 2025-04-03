@@ -8,7 +8,7 @@ const app = new Hono();
 
 // Enable CORS with specific configuration
 app.use('*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   allowMethods: ['POST', 'GET', 'OPTIONS'],
   allowHeaders: ['Content-Type'],
   exposeHeaders: ['Content-Length'],
@@ -83,6 +83,3 @@ serve({
   fetch: app.fetch,
   port
 });
-
-console.log(`Server is running on port ${port}`);
-

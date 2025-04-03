@@ -1,10 +1,10 @@
 /** Config */
-const audioSrc = '/audios/audio-3.wav';
-const animationJson = '/audios/audio-3.json';
+const BACKEND_URL = 'http://localhost:3000';
 
 /** DOM Elements */
 const audio = document.getElementById('audio');
 const startButton = document.getElementById('start');
+const audioFileInput = document.getElementById('audioFile');
 
 /** State */
 const state = new Proxy({
@@ -13,6 +13,7 @@ const state = new Proxy({
     previousCue: null,
     isPlaying: false,
     mouthElement: null,
+    audioFile: null
 }, {
     set(target, prop, value) {
         target[prop] = value;
@@ -38,6 +39,10 @@ const state = new Proxy({
                 target.mouthElement.classList.add(`cue_${target.currentCue}`);
             }
         }
+
+        if (prop === 'audioFile') {
+            startButton.disabled = !value;
+        }
     }
 });
 
@@ -48,13 +53,39 @@ function initializeMouth() {
     }
 }
 
-async function getAnimation() {
-    const response = await fetch(animationJson);
-    const data = await response.json();
-    const cues = data?.mouthCues;
+async function processAudioFile(file) {
+    try {
+        const formData = new FormData();
+        formData.append('audio', file);
 
-    const cuesWithTime = cues.filter(cue => cue.end - cue.start > 0.02);
-    return cuesWithTime;
+        const response = await fetch(`${BACKEND_URL}/lipsync`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {
+                // Don't set Content-Type header, let the browser set it with the boundary
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error:', errorText);
+            throw new Error(`Failed to process audio: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const cues = data?.mouthCues;
+
+        if (!cues) {
+            throw new Error('Invalid response format');
+        }
+
+        return cues.filter(cue => cue.end - cue.start > 0.02);
+    } catch (error) {
+        console.error('Error processing audio:', error);
+        alert('Failed to process audio file. Please try again. Error: ' + error.message);
+        return [];
+    }
 }
 
 function animateShapes() {
@@ -86,31 +117,45 @@ function stopAnimation() {
     state.currentCue = null;
 }
 
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Create object URL for audio playback
+    const objectUrl = URL.createObjectURL(file);
+    audio.src = objectUrl;
+    state.audioFile = file;
+}
+
+async function handleStart() {
+    if (state.isPlaying) {
+        audio.pause();
+        stopAnimation();
+        return;
+    }
+
+    if (!state.animation.length) {
+        startButton.disabled = true;
+        state.animation = await processAudioFile(state.audioFile);
+        startButton.disabled = false;
+        
+        if (!state.animation.length) {
+            return;
+        }
+    }
+
+    audio.play();
+    state.isPlaying = true;
+    animateShapes();
+}
+
 async function main() {
     initializeMouth();
 
-    audio.src = audioSrc;
-    state.animation = await getAnimation();
-
-    if (state.animation.length) {
-        startButton.disabled = false;
-    }
-
-    startButton.addEventListener('click', () => {
-        if (state.isPlaying) {
-            audio.pause();
-            stopAnimation();
-            return;
-        }
-
-        audio.play();
-        state.isPlaying = true;
-        animateShapes();
-    });
-
-    audio.addEventListener('ended', () => {
-        stopAnimation();
-    });
+    // Event listeners
+    audioFileInput.addEventListener('change', handleFileSelect);
+    startButton.addEventListener('click', handleStart);
+    audio.addEventListener('ended', stopAnimation);
 }
 
 main();

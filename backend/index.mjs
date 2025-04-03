@@ -6,9 +6,14 @@ import { cors } from 'hono/cors';
 
 const app = new Hono();
 
+// Get allowed origins from environment or use defaults
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
+  process.env.ALLOWED_ORIGINS.split(',') : 
+  ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+
 // Enable CORS with specific configuration
 app.use('*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: allowedOrigins,
   allowMethods: ['POST', 'GET', 'OPTIONS'],
   allowHeaders: ['Content-Type'],
   exposeHeaders: ['Content-Length'],
@@ -78,7 +83,9 @@ app.post('/lipsync', async (c) => {
 });
 
 // Start the server
-const port = 3000;
+const port = process.env.PORT || 3000;
+console.log(`Server starting on port ${port}`);
+
 serve({
   fetch: app.fetch,
   port

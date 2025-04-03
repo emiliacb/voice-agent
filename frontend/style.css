@@ -1,0 +1,460 @@
+@layer reset {
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    } 
+
+    button {
+        border: none;
+        background-color: transparent;
+        cursor: pointer;
+    }
+}
+
+:root {
+    --primary-color: #2f60e7;
+    --secondary-color: #9d671b;
+    --primary-color-bg: var(--primary-color);
+    --secondary-color-bg: var(--secondary-color);
+    --primary-color-text: #fff;
+    --secondary-color-text: #fff;
+
+    --system-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+html {
+    font-family: var(--system-font);
+}
+
+.header {
+    font-size: 1.5rem;
+    font-weight: 600;
+    padding: 4rem 2rem;
+}
+
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.row {
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    &.column {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+.button {
+    padding: 1rem 2rem;
+    border-radius: 1rem;
+    font-size: 1.2rem;
+    transition: filter 2s ease-in-out;
+
+    &.primary {
+        background-color: var(--primary-color-bg);
+        color: var(--primary-color-text);
+    }
+    
+    &.secondary {
+        background-color: var(--secondary-color-bg);
+        color: var(--secondary-color-text);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+#audio {
+    display: none;
+}
+
+#avatar {
+    position: relative;
+    margin-top: 6rem;
+    width: 20rem;
+    height: 20rem;
+    background-color: var(--primary-color-bg);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 5rem;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(0) rotateY(0) translateZ(0);
+}
+
+/* Scanlines effect */
+#avatar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 150%;
+    height: 200%;
+    left: -25%;
+    top: -25%;
+    background-image: linear-gradient(rgb(0, 0, 0, 0.3) 50%, transparent 50%);
+    background-size: 100% 5px;
+    filter: blur(1px);
+    rotate: 3deg;
+    opacity: 0.05;
+    mix-blend-mode: darken;
+    filter: brightness(1.5);
+    animation: scanlines 10s linear infinite;
+    z-index: 10;
+}
+
+#avatar::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 150%;
+    height: 150%;
+    left: -25%;
+    top: -25%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.2), rgba(255,255,255,0.4), rgba(255,255,255,0.2));
+    animation: scanline 1.5s linear infinite;
+    background-size: 100% 80px;
+    background-repeat: no-repeat;
+    rotate: -3deg;
+    z-index: 11;
+    opacity: 0.05;
+    filter: blur(10px);
+}
+
+@keyframes scanlines {
+    0% {
+        background-position: 0 30%;
+    }
+    30% {
+        background-position: 0 10%;
+        rotate: -3deg;
+    }
+    100% {
+        background-position: 0 40%;
+    }
+}
+
+@keyframes scanline {
+    0% {
+        background-position: 0 0;
+    }
+    20% {
+        background-position: 0 20%;
+    }
+    40% {
+        background-position: 0 100%;
+    }
+    40% {
+        rotate: 6deg;
+        background-position: 0 0;
+    }
+    60% {
+        rotate: -3deg;
+        background-position: 0 80%;
+    }
+    70% {
+        background-position: 0 75%;
+    }
+    80% {
+        background-position: 0 100%;
+    }
+    100% {
+        background-position: 0 100%;
+    }
+}
+
+.mouth {
+    position: relative;
+    overflow: hidden;
+    width: 15rem;
+    height: 10rem;
+    border-left-width: 2rem;
+    border-right-width: 2rem;
+    border-color: tomato;
+    border-style: solid;
+    border-radius: 3rem;
+    background-color: #533;
+    transition: height 100ms ease-in-out;
+
+    .upper_lips {
+        position: absolute;
+        width: calc(100% + 8rem);
+        height: 5rem;
+        background-color: tomato;
+        top: -2rem;
+        left: -4rem;
+        transition: 20ms linear;
+    }
+
+    .upper_lips::after {
+        content: '';
+        position: absolute;
+        width: 3rem;
+        height: 0.8rem;
+        transform: rotate(3deg);
+        border-radius: 100% 0 0 0;
+        border-top: 2px solid white;
+        bottom: 2rem;
+        left: 3rem;
+        z-index: 2;
+        transition: 50ms ease-in-out;
+    }
+
+    .upper_lips::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 3.5rem;
+        bottom: 12rem;
+        mask-image: radial-gradient(ellipse at center bottom, transparent 60%, black 60%);
+        mask-size: 50% 25%;
+        mask-position: center bottom;
+        mask-repeat: no-repeat;
+        background-color: tomato;
+        transition: 50ms ease-in-out;
+    }
+    
+    .teeth {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        width: calc(100% + 8rem);
+        height: 2.5rem;
+        top: 1rem;
+        left: -4rem;
+        transition: 20ms linear;
+
+        &::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 50%;
+            top: 0;
+            background-color: rgb(219, 81, 122);
+        }
+        
+        .tooth {
+            position: relative;
+            top: 0;
+            height: 2rem;
+            width: 2rem;
+            margin-right: 1px;
+            background-color: white;
+            border-radius: 0.7rem;
+        }
+
+        .tooth:nth-child(3) {
+            height: calc(2rem + 5px);
+            width: calc(2rem + 3px);
+            clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 70% 100%, 0% 100%);
+        }
+
+        .tooth:nth-child(4) {
+            height: calc(2rem + 5px);
+            width: calc(2rem + 3px);
+        }
+
+        .tooth:nth-child(6) {
+            clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 60% 100%, 0% 100%);
+        }
+        
+    }
+    
+    .lower_lips {
+        position: absolute;
+        width: calc(100% + 8rem);
+        height: 5rem;
+        background-color: tomato;
+        bottom: -2rem;
+        left: -4rem;
+        border-top: 0.2rem solid rgba(0, 0, 0, 0.2);
+        transition: 20ms linear;
+    }
+
+    .tongue {
+        position: absolute;
+        width: 7rem;
+        height: 1.5rem;
+        background-color: #c553a7;
+        border-radius: 0.1rem 0.1rem 2.5rem 2.5rem;
+        bottom: 2rem;
+        left: calc(50% - 3.5rem);
+        z-index: 0;
+        opacity: 0.6;
+        border-top: 0.4rem solid rgba(0, 0, 0, 0.2);
+        transition: 50ms linear;
+    }
+}
+/* 
+Closed mouth for the "P", "B", and "M" sounds. This is almost identical to the Ⓧ shape, but there is ever-so-slight pressure between the lips. */
+.mouth.cue_A {
+    transition: 50ms ease-in-out;
+    height: 5rem;
+
+    .lower_lips {
+        bottom: -2.5rem;
+        transform: rotate(-2deg);
+    }
+
+    .upper_lips {
+        top: -2rem;
+        transform: rotate(2deg);
+    }
+
+    .upper_lips::after {
+        transition: 50ms ease-in-out;
+        width: 4.5rem;
+        left: 3.5rem;
+    }
+}
+
+/* 
+Slightly open mouth with clenched teeth. This mouth shape is used for most consonants ("K", "S", "T", etc.). It's also used for some vowels such as the "EE" sound in bee. */
+.mouth.cue_B {
+    transition: 50ms ease-in-out;
+    height: 7rem;
+
+    .lower_lips {
+        transform: rotate(1deg);
+    }
+
+    .tongue {
+        bottom: 1rem
+    }
+}
+
+/* 
+Open mouth. This mouth shape is used for vowels like "EH" as in men and "AE" as in bat. It's also used for some consonants, depending on context.
+This shape is also used as an in-between when animating from Ⓐ or Ⓑ to Ⓓ. So make sure the animations ⒶⒸⒹ and ⒷⒸⒹ look smooth! */
+.mouth.cue_C {
+    transition: 50ms ease-in-out;
+    height: 9rem;
+    width: 13rem;
+}
+
+/* 
+Wide open mouth. This mouth shapes is used for vowels like "AA" as in father. */
+.mouth.cue_D {
+    transition: 50ms ease-in-out;
+    height: 10rem;
+    width: 12rem;
+
+    .tongue {
+        bottom: 2.1rem;
+        height: 1.5rem;
+        width: 8rem;
+        left: calc(50% - 4rem);
+    }
+}
+
+/* 
+Slightly rounded mouth. This mouth shape is used for vowels like "AO" as in off and "ER" as in bird.
+This shape is also used as an in-between when animating from Ⓒ or Ⓓ to Ⓕ. Make sure the mouth isn't wider open than for Ⓒ. Both ⒸⒺⒻ and ⒹⒺⒻ should result in smooth animation. */
+.mouth.cue_E {
+    transition: 50ms ease-in-out;
+    height: 8rem;
+    width: 10rem;
+
+    .upper_lips {
+        top: -3rem;
+    }
+
+    .upper_lips::before {
+        bottom: -1rem;
+        z-index: 2;
+        mask-size: 50% 35%;
+        transition: 50ms ease-in-out;
+    }
+
+    .tongue {
+        bottom: 1.5rem;
+    }
+}
+
+/* 
+Puckered lips. This mouth shape is used for "UW" as in you, "OW" as in show, and "W" as in way. */
+.mouth.cue_F {
+    transition: 50ms ease-in-out;
+    height: 8rem;
+    width: 8rem;
+
+    .upper_lips {
+        top: -3rem;
+    }
+
+    .upper_lips::before {
+        bottom: -1.8rem;
+        z-index: 2;
+        height: 5rem;
+        mask-size: 50% 40%;
+        transition: 50ms ease-in-out;
+    }
+}
+
+/* 
+Upper teeth touching the lower lip for "F" as in for and "V" as in very.
+This extended mouth shape is optional. If your art style is detailed enough, it greatly improves the overall look of the animation. If you decide not to use it, you can specify so using the extendedShapes option. */
+.mouth.cue_G {
+    transition: 50ms ease-in-out;
+    height: 4rem;
+
+    .teeth {
+        top: 1.4rem;
+        height: 1rem;
+        border-bottom: 0.2rem solid rgba(0, 0, 0, 0.2);
+        transform: rotate(2sdeg);
+        border-radius: 4rem;
+    }
+
+    .lower_lips {
+        border-top: 0.2rem solid rgba(0, 0, 0, 0);
+    }
+}
+
+/* 
+This shape is used for long "L" sounds, with the tongue raised behind the upper teeth. The mouth should be at least far open as in Ⓒ, but not quite as far as in Ⓓ.
+This extended mouth shape is optional. Depending on your art style and the angle of the head, the tongue may not be visible at all. In this case, there is no point in drawing this extra shape. If you decide not to use it, you can specify so using the extendedShapes option. */
+.mouth.cue_H {
+    transition: 50ms ease-in-out;
+    height: 9rem;
+
+    .tongue {
+        position: absolute;
+        width: 7rem;
+        height: 3rem;
+        background-color: #c553a7;
+        border-radius: 2.5rem 2.5rem 0.1rem 0.1rem;
+        bottom: 3rem;
+        left: calc(50% - 2.5rem);
+        z-index: 0;
+        border-top: 0.2rem solid rgba(0, 0, 0, 0.1);
+        opacity: 1;
+        transition: 50ms ease-in-out;
+    }
+}
+
+/* Idle position. This mouth shape is used for pauses in speech. This should be the same mouth drawing you use when your character is walking around without talking. It is almost identical to Ⓐ, but with slightly less pressure between the lips: For Ⓧ, the lips should be closed but relaxed.
+This extended mouth shape is optional. Whether there should be any visible difference between the rest position Ⓧ and the closed talking mouth Ⓐ depends on your art style and personal taste. If you decide not to use it, you can specify so using the extendedShapes option. */
+.mouth.cue_X {
+    transition: 50ms ease-in-out;
+    height: 6rem;
+
+    .upper_lips::after {
+        transition: 50ms ease-in-out;
+        width: 4rem;
+        height: 1rem;
+        left: 4rem;
+        bottom: 1.9rem;
+        transform: rotate(7deg);
+    }
+}

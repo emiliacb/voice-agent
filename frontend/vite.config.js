@@ -7,6 +7,16 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html'
+      },
+      output: {
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.')
+          const ext = info[info.length - 1]
+          if (/\.(css)$/i.test(assetInfo.name)) {
+            return `assets/[name].[hash][extname]`
+          }
+          return `assets/[name]-[hash][extname]`
+        }
       }
     }
   },

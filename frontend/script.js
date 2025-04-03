@@ -62,7 +62,7 @@ async function processAudioFile(file) {
         const formData = new FormData();
         formData.append('audio', file);
 
-        const response = await fetch(`${BACKEND_BASE_URL}/api/lipsync`, {
+        const response = await fetch(`${BACKEND_BASE_URL}/lipsync`, {
             method: 'POST',
             body: formData,
             credentials: 'include',

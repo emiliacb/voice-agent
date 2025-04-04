@@ -32,12 +32,50 @@ app.post('/lipsync', async (c) => {
 
     const buffer = Buffer.from(await audioFile.arrayBuffer());
     
-    // Since we're in Docker, we can directly use the rhubarb binary
-    const inputPath = `/tmp/input-${Date.now()}.wav`;
-    const outputPath = `/tmp/output-${Date.now()}.json`;
+    // Get the content type of the uploaded file
+    const contentType = audioFile.type;
     
-    // Use Node's fs promises to write file
-    await fs.writeFile(inputPath, buffer);
+    // Generate unique file paths
+    const timestamp = Date.now();
+    const originalPath = `/tmp/original-${timestamp}`;
+    const inputPath = `/tmp/input-${timestamp}.wav`;
+    const outputPath = `/tmp/output-${timestamp}.json`;
+    
+    // Write the original file
+    await fs.writeFile(originalPath, buffer);
+    
+    // Convert to WAV if not already WAV format
+    if (!contentType.includes('audio/wav') && !contentType.includes('audio/x-wav')) {
+      // Use ffmpeg to convert to WAV
+      const ffmpeg = spawn('ffmpeg', [
+        '-i', originalPath,
+        '-acodec', 'pcm_s16le',
+        '-ar', '44100',
+        '-ac', '1',
+        '-y', // Overwrite output file if exists
+        inputPath
+      ]);
+      
+      let ffmpegError = '';
+      ffmpeg.stderr.on('data', (data) => {
+        ffmpegError += data.toString();
+      });
+      
+      // Wait for ffmpeg conversion
+      await new Promise((resolve, reject) => {
+        ffmpeg.on('close', (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`FFmpeg conversion failed with code ${code}. Error: ${ffmpegError}`));
+        });
+        ffmpeg.on('error', reject);
+      });
+      
+      // Clean up original file after conversion
+      await fs.unlink(originalPath);
+    } else {
+      // If it's already WAV, just move the buffer to input path
+      await fs.writeFile(inputPath, buffer);
+    }
 
     // Run Rhubarb using child_process with performance optimizations
     const proc = spawn('rhubarb', [

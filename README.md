@@ -43,12 +43,17 @@ To build and run the application using Docker:
 docker build --platform linux/amd64 -t voice-agent:latest .
 ```
 
-2. Run the container:
+3. To build the backend container:
+```bash
+docker build --platform linux/amd64 -f Dockerfile.backend -t voice-agent-backend:latest .
+```
+
+3. Run the combined container:
 ```bash
 docker run --platform linux/amd64 --name voice-agent --rm -p 8080:80 voice-agent:latest
 ```
 
-3. Rebuild and rerun:
+4. Rebuild and rerun example:
 ```bash
 docker build --no-cache --platform linux/amd64 -t voice-agent:latest .
 docker rm -f voice-agent

@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
     libportaudio2 \
     curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -49,6 +50,7 @@ RUN apt-get update && \
     libc6 \
     libsndfile1 \
     libportaudio2 \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy nginx configuration

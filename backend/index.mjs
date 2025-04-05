@@ -1,13 +1,18 @@
+import { config } from 'dotenv';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
+
 import { Log } from './utils/logger.mjs';
 import { processAudioWithRhubarb } from './services/rhubarb.mjs';
+
+config();
 
 const app = new Hono();
 
 app.use('*', cors({
-  origin: '*',
+  origin: process.env.ALLOWED_ORIGINS.split(','),
+  credentials: true
 }));
 
 app.use("*", async (c, next) => {
@@ -35,12 +40,9 @@ app.post('/rhubarb', async (c) => {
   }
 });
 
-// Start the server
 const port = process.env.PORT || 3000;
-
-Log.info(`Server started on port ${port}`);
 
 serve({
   fetch: app.fetch,
-  port
+  port,
 });

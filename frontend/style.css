@@ -71,6 +71,22 @@ html {
     }
 }
 
+.recording {
+    position: relative;
+}
+
+.recording::before {
+    content: "";
+    position: absolute;
+    top: -0.5rem;
+    left: -0.5rem;
+    width: 2rem;
+    height: 2rem;
+    background-color: red;
+    z-index: 10;
+    border-radius: 100%;
+}
+
 #audio {
     display: none;
 }
@@ -295,6 +311,7 @@ html {
         transition: 50ms linear;
     }
 }
+
 /* 
 Closed mouth for the "P", "B", and "M" sounds. This is almost identical to the Ⓧ shape, but there is ever-so-slight pressure between the lips. */
 .mouth.cue_A {

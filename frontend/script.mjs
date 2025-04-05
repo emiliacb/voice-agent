@@ -13,6 +13,7 @@ const state = new Proxy(
         previousCue: IDLE_SHAPE_ID,
         isPlaying: false,
         isRecording: false,
+        isLoading: false,
         mediaRecorder: null,
         audioChunks: [],
     },
@@ -21,19 +22,28 @@ const state = new Proxy(
             try {
                 target[prop] = value;
 
-                if (prop === "isPlaying") {
-                    if (!value) {
+                switch (prop) {
+                    case "currentCue":
+                        if (target.previousCue) {
+                            mouthElement.classList.remove(`cue_${target.previousCue}`);
+                        }
+                        if (target.currentCue) {
+                            mouthElement.classList.add(`cue_${target.currentCue}`);
+                        }
+                        break;
+                        
+                    case "isRecording":
+                        pttButton.classList.toggle("recording", value);
+                        pttButton.textContent = value ? "Recording..." : "Hold to Talk";
                         pttButton.disabled = false;
-                    }
-                }
-
-                if (prop === "currentCue" && mouthElement) {
-                    if (target.previousCue) {
-                        mouthElement.classList.remove(`cue_${target.previousCue}`);
-                    }
-                    if (target.currentCue) {
-                        mouthElement.classList.add(`cue_${target.currentCue}`);
-                    }
+                        break;
+                        
+                    case "isLoading":
+                        if (value) {
+                            pttButton.textContent = "Sending...";
+                            pttButton.disabled = value;
+                        }
+                        break;
                 }
 
                 return true;
@@ -47,14 +57,15 @@ const state = new Proxy(
 
 async function sendAudioToServer(audioBlob) {
     try {
-        pttButton.disabled = true;
-        pttButton.textContent = "Sending...";
+        state.isLoading = true;
+
         const formData = new FormData();
         formData.append("audio", audioBlob);
 
         const response = await fetch(`${BACKEND_BASE_URL}/rhubarb`, {
             method: "POST",
             body: formData,
+            credentials: "include"
         });
 
         if (!response.ok) {
@@ -62,6 +73,7 @@ async function sendAudioToServer(audioBlob) {
         }
 
         const result = await response.json();
+        
         if (result.mouthCues) {
             state.animation = result.mouthCues;
             const audioUrl = URL.createObjectURL(audioBlob);
@@ -70,14 +82,22 @@ async function sendAudioToServer(audioBlob) {
             state.isPlaying = true;
             animateShapes();
         }
+
+        state.isLoading = false;
+
     } catch (error) {
+        state.isLoading = false;
         console.error("Error sending audio:", error);
-        pttButton.disabled = false;
     }
 }
 
 async function startRecording() {
-    if (state.isRecording || state.isPlaying) return;
+    if (state.isRecording || state.isLoading) return;
+
+    if (state.isPlaying) {
+        stopAnimation();
+        audio.pause();
+    }
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -96,8 +116,6 @@ async function startRecording() {
 
         state.mediaRecorder.start();
         state.isRecording = true;
-        pttButton.classList.add("recording");
-        pttButton.textContent = "Recording...";
     } catch (error) {
         console.error("Error accessing microphone:", error);
         alert("Could not access microphone");
@@ -117,8 +135,6 @@ async function stopRecording() {
             // Cleanup
             state.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
             state.isRecording = false;
-            pttButton.classList.remove("recording");
-            pttButton.textContent = "Hold to Talk";
             resolve();
         };
 
@@ -165,6 +181,7 @@ function stopAnimation() {
     state.isPlaying = false;
     state.previousCue = IDLE_SHAPE_ID;
     state.currentCue = IDLE_SHAPE_ID;
+    mouthElement.classList.add(`cue_${IDLE_SHAPE_ID}`);
 }
 
 async function main() {

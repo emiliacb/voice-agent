@@ -1,9 +1,28 @@
 /** Config */
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 const IDLE_SHAPE_ID = "X";
+const AVAILABLE_LANGUAGES = ["en", "es"];
+const AUDIO_BIT_RATE = 12000;
 
 /** DOM Elements */
 let audio, pttButton, mouthElement;
+
+/** I18n */
+const WORDINGS = {
+    en: {
+        title: "Voice Agent",
+        pttButton: "Hold to Talk",
+        recording: "Recording...",
+        sending: "Sending...",
+    },
+    es: {
+        title: "Agente de voz",
+        pttButton: "Pulsar para hablar",
+        recording: "Grabando...",
+        sending: "Enviando...",
+    },
+};
+let i18n = WORDINGS.en;
 
 /** State */
 const state = new Proxy(
@@ -34,13 +53,14 @@ const state = new Proxy(
                         
                     case "isRecording":
                         pttButton.classList.toggle("recording", value);
-                        pttButton.textContent = value ? "Recording..." : "Hold to Talk";
+                        pttButton.textContent = value ? i18n.recording : i18n.pttButton;
                         pttButton.disabled = false;
                         break;
                         
                     case "isLoading":
                         if (value) {
-                            pttButton.textContent = "Sending...";
+                            pttButton.classList.remove("recording");
+                            pttButton.textContent = i18n.sending;
                             pttButton.disabled = value;
                         }
                         break;
@@ -105,7 +125,7 @@ async function startRecording() {
 
         state.mediaRecorder = new MediaRecorder(stream, {
             mimeType: "audio/webm;codecs=opus",
-            audioBitsPerSecond: 32000,
+            audioBitsPerSecond: AUDIO_BIT_RATE,
         });
 
         state.mediaRecorder.ondataavailable = (event) => {
@@ -155,6 +175,19 @@ function initialize() {
     pttButton = document.getElementById("pttButton");
     mouthElement = document.querySelector(".mouth");
     setupPushToTalk();
+
+    const queryParams = new URLSearchParams(window.location.search);
+    const selectedLanguage = queryParams.get("lang");
+    const navigatorLanguage = navigator.language.split("-")[0];
+    const preferedLanguage = selectedLanguage || navigatorLanguage;
+
+    if (AVAILABLE_LANGUAGES.includes(preferedLanguage)) {
+        i18n = WORDINGS[preferedLanguage];
+    }
+
+    document.title = i18n.title;
+    document.documentElement.setAttribute("lang", preferedLanguage);
+    pttButton.textContent = i18n.pttButton;
 }
 
 function animateShapes() {

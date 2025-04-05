@@ -3,7 +3,7 @@
         margin: 0;
         padding: 0;
         box-sizing: border-box;
-    } 
+    }
 
     button {
         border: none;
@@ -12,19 +12,97 @@
     }
 }
 
-:root {
-    --primary-color: #2f60e7;
-    --secondary-color: #9d671b;
-    --primary-color-bg: var(--primary-color);
-    --secondary-color-bg: var(--secondary-color);
-    --primary-color-text: #fff;
-    --secondary-color-text: #fff;
+@layer variables {
+    :root {
+        --primary-color: #482d8b; /* old: #2f60e7 */
+        --secondary-color: #9d671b;
+        --primary-color-bg: var(--primary-color);
+        --secondary-color-bg: var(--secondary-color);
+        --primary-color-text: #fff;
+        --secondary-color-text: #fff;
 
-    --system-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        --lips-color: tomato;
+        --tongue-color: #c553a7;
+
+        --system-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    }
 }
+
+@layer animations {
+    @keyframes scanlines {
+        0% {
+            background-position: 0 30%;
+        }
+
+        30% {
+            background-position: 0 10%;
+            rotate: -3deg;
+        }
+
+        100% {
+            background-position: 0 40%;
+        }
+    }
+
+    @keyframes scanline {
+        0% {
+            background-position: 0 0;
+        }
+
+        20% {
+            background-position: 0 20%;
+        }
+
+        40% {
+            background-position: 0 100%;
+        }
+
+        40% {
+            rotate: 6deg;
+            background-position: 0 0;
+        }
+
+        60% {
+            rotate: -3deg;
+            background-position: 0 80%;
+        }
+
+        70% {
+            background-position: 0 75%;
+        }
+
+        80% {
+            background-position: 0 100%;
+        }
+
+        100% {
+            background-position: 0 100%;
+        }
+    }
+
+    @keyframes ping {
+        0% {
+            transform: scale(0.5);
+            opacity: 1;
+        }
+
+        80% {
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 0;
+        }
+    }
+}
+
 
 html {
     font-family: var(--system-font);
+    height: 100svh;
+    color: #333;
+    background-image: linear-gradient(to left, rgb(47, 47, 47), black);
 }
 
 .header {
@@ -50,16 +128,18 @@ html {
 }
 
 .button {
+    position: relative;
     padding: 1rem 2rem;
     border-radius: 1rem;
     font-size: 1.2rem;
-    transition: filter 2s ease-in-out;
+    user-select: none;
+    border: 1px solid white;
 
     &.primary {
         background-color: var(--primary-color-bg);
         color: var(--primary-color-text);
     }
-    
+
     &.secondary {
         background-color: var(--secondary-color-bg);
         color: var(--secondary-color-text);
@@ -71,8 +151,13 @@ html {
     }
 }
 
-.recording {
-    position: relative;
+.walkie-talkie {
+    border-radius: 1rem;
+    padding: 0 2rem 3rem 2rem;
+    margin: 4rem auto 1rem auto;
+    width: fit-content;
+    border: 1px solid white;
+    background-color: rgb(53, 58, 62);
 }
 
 .recording::before {
@@ -82,9 +167,10 @@ html {
     left: -0.5rem;
     width: 2rem;
     height: 2rem;
-    background-color: red;
+    background-color: var(--lips-color);
     z-index: 10;
     border-radius: 100%;
+    animation: ping 1s linear infinite;
 }
 
 #audio {
@@ -93,16 +179,17 @@ html {
 
 #avatar {
     position: relative;
-    margin-top: 6rem;
+    margin-top: 3rem;
     width: 20rem;
     height: 20rem;
-    background-color: var(--primary-color-bg);
+    background-color: rgb(47, 47, 47);
     border-radius: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 5rem;
     overflow: hidden;
+    border: 1px solid white;
     transform: perspective(1000px) rotateX(0) rotateY(0) translateZ(0);
 }
 
@@ -120,7 +207,7 @@ html {
     background-size: 100% 5px;
     filter: blur(1px);
     rotate: 3deg;
-    opacity: 0.05;
+    opacity: 0.2;
     mix-blend-mode: darken;
     filter: brightness(1.5);
     animation: scanlines 10s linear infinite;
@@ -136,56 +223,14 @@ html {
     height: 150%;
     left: -25%;
     top: -25%;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.2), rgba(255,255,255,0.4), rgba(255,255,255,0.2));
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
     animation: scanline 1.5s linear infinite;
     background-size: 100% 80px;
     background-repeat: no-repeat;
     rotate: -3deg;
     z-index: 11;
-    opacity: 0.05;
+    opacity: 0.1;
     filter: blur(10px);
-}
-
-@keyframes scanlines {
-    0% {
-        background-position: 0 30%;
-    }
-    30% {
-        background-position: 0 10%;
-        rotate: -3deg;
-    }
-    100% {
-        background-position: 0 40%;
-    }
-}
-
-@keyframes scanline {
-    0% {
-        background-position: 0 0;
-    }
-    20% {
-        background-position: 0 20%;
-    }
-    40% {
-        background-position: 0 100%;
-    }
-    40% {
-        rotate: 6deg;
-        background-position: 0 0;
-    }
-    60% {
-        rotate: -3deg;
-        background-position: 0 80%;
-    }
-    70% {
-        background-position: 0 75%;
-    }
-    80% {
-        background-position: 0 100%;
-    }
-    100% {
-        background-position: 0 100%;
-    }
 }
 
 .mouth {
@@ -195,7 +240,7 @@ html {
     height: 10rem;
     border-left-width: 2rem;
     border-right-width: 2rem;
-    border-color: tomato;
+    border-color: var(--lips-color);
     border-style: solid;
     border-radius: 3rem;
     background-color: #533;
@@ -205,7 +250,7 @@ html {
         position: absolute;
         width: calc(100% + 8rem);
         height: 5rem;
-        background-color: tomato;
+        background-color: var(--lips-color);
         top: -2rem;
         left: -4rem;
         transition: 20ms linear;
@@ -235,10 +280,10 @@ html {
         mask-size: 50% 25%;
         mask-position: center bottom;
         mask-repeat: no-repeat;
-        background-color: tomato;
+        background-color: var(--lips-color);
         transition: 50ms ease-in-out;
     }
-    
+
     .teeth {
         display: flex;
         align-items: center;
@@ -258,7 +303,7 @@ html {
             top: 0;
             background-color: rgb(219, 81, 122);
         }
-        
+
         .tooth {
             position: relative;
             top: 0;
@@ -283,14 +328,14 @@ html {
         .tooth:nth-child(6) {
             clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 60% 100%, 0% 100%);
         }
-        
+
     }
-    
+
     .lower_lips {
         position: absolute;
         width: calc(100% + 8rem);
         height: 5rem;
-        background-color: tomato;
+        background-color: var(--lips-color);
         bottom: -2rem;
         left: -4rem;
         border-top: 0.2rem solid rgba(0, 0, 0, 0.2);
@@ -301,7 +346,7 @@ html {
         position: absolute;
         width: 7rem;
         height: 1.5rem;
-        background-color: #c553a7;
+        background-color: var(--tongue-color);
         border-radius: 0.1rem 0.1rem 2.5rem 2.5rem;
         bottom: 2rem;
         left: calc(50% - 3.5rem);

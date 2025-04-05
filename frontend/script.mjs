@@ -2,7 +2,10 @@
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 const IDLE_SHAPE_ID = "X";
 const AVAILABLE_LANGUAGES = ["en", "es"];
-const AUDIO_BIT_RATE = 12000;
+const AUDIO_BIT_RATE = 16000;
+
+/** Web Worker */
+const audioWorker = new Worker(new URL('./audioWorker.js', import.meta.url));
 
 /** DOM Elements */
 let audio, pttButton, mouthElement;
@@ -79,24 +82,33 @@ async function sendAudioToServer(audioBlob) {
     try {
         state.isLoading = true;
 
-        const formData = new FormData();
-        formData.append("audio", audioBlob);
-
-        const response = await fetch(`${BACKEND_BASE_URL}/rhubarb`, {
-            method: "POST",
-            body: formData,
-            credentials: "include"
+        // Create a promise that will resolve when the worker sends back the result
+        const workerResponse = new Promise((resolve, reject) => {
+            audioWorker.onmessage = (e) => {
+                const { type, data, error } = e.data;
+                if (type === 'AUDIO_PROCESSED') {
+                    resolve(data);
+                } else if (type === 'ERROR') {
+                    reject(new Error(error));
+                }
+            };
         });
 
-        if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
-        }
+        // Send audio chunks to worker
+        audioWorker.postMessage({
+            type: 'SEND_AUDIO',
+            data: {
+                audioChunks: state.audioChunks,
+                backendUrl: BACKEND_BASE_URL
+            }
+        });
 
-        const result = await response.json();
+        // Wait for worker response
+        const result = await workerResponse;
         
         if (result.mouthCues) {
             state.animation = result.mouthCues;
-            const audioUrl = URL.createObjectURL(audioBlob);
+            const audioUrl = URL.createObjectURL(result.audioBlob);
             audio.src = audioUrl;
             audio.play();
             state.isPlaying = true;
@@ -107,7 +119,7 @@ async function sendAudioToServer(audioBlob) {
 
     } catch (error) {
         state.isLoading = false;
-        console.error("Error sending audio:", error);
+        console.error("Error processing audio:", error);
     }
 }
 

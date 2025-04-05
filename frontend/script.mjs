@@ -3,12 +3,17 @@ const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 const IDLE_SHAPE_ID = "X";
 const AVAILABLE_LANGUAGES = ["en", "es"];
 const AUDIO_BIT_RATE = 16000;
+const RECORDER_TIME_SLICE = 100; // ms
 
 /** Web Worker */
 const audioWorker = new Worker(new URL('./audioWorker.js', import.meta.url));
 
 /** DOM Elements */
 let audio, pttButton, mouthElement;
+
+// Pre-initialized stream and recorder
+let audioStream = null;
+let mediaRecorder = null;
 
 /** I18n */
 const WORDINGS = {
@@ -123,6 +128,26 @@ async function sendAudioToServer(audioBlob) {
     }
 }
 
+// Initialize audio recording capabilities
+async function initializeAudioCapture() {
+    try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                channelCount: 1,
+                sampleRate: AUDIO_BIT_RATE
+            } 
+        });
+        mediaRecorder = new MediaRecorder(audioStream, {
+            mimeType: "audio/webm;codecs=opus",
+            audioBitsPerSecond: AUDIO_BIT_RATE,
+        });
+        // Pause the tracks until needed
+        audioStream.getTracks().forEach(track => track.enabled = false);
+    } catch (error) {
+        console.error("Error initializing audio capture:", error);
+    }
+}
+
 async function startRecording() {
     if (state.isRecording || state.isLoading) return;
 
@@ -132,24 +157,26 @@ async function startRecording() {
     }
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // If we don't have a mediaRecorder or it's inactive, initialize it
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+            await initializeAudioCapture();
+        }
+
         state.audioChunks = [];
+        
+        // Enable the audio tracks
+        audioStream.getTracks().forEach(track => track.enabled = true);
 
-        state.mediaRecorder = new MediaRecorder(stream, {
-            mimeType: "audio/webm;codecs=opus",
-            audioBitsPerSecond: AUDIO_BIT_RATE,
-        });
-
-        state.mediaRecorder.ondataavailable = (event) => {
+        mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 state.audioChunks.push(event.data);
             }
         };
 
-        state.mediaRecorder.start();
+        mediaRecorder.start(RECORDER_TIME_SLICE);
         state.isRecording = true;
     } catch (error) {
-        console.error("Error accessing microphone:", error);
+        console.error("Error starting recording:", error);
         alert("Could not access microphone");
     }
 }
@@ -158,19 +185,19 @@ async function stopRecording() {
     if (!state.isRecording) return;
 
     return new Promise((resolve) => {
-        state.mediaRecorder.onstop = async () => {
+        mediaRecorder.onstop = async () => {
             const audioBlob = new Blob(state.audioChunks, {
                 type: "audio/webm;codecs=opus",
             });
             await sendAudioToServer(audioBlob);
 
-            // Cleanup
-            state.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+            // Disable the tracks to save resources
+            audioStream.getTracks().forEach(track => track.enabled = false);
             state.isRecording = false;
             resolve();
         };
 
-        state.mediaRecorder.stop();
+        mediaRecorder.stop();
     });
 }
 
@@ -187,6 +214,9 @@ function initialize() {
     pttButton = document.getElementById("pttButton");
     mouthElement = document.querySelector(".mouth");
     setupPushToTalk();
+    
+    // Initialize audio capture when the page loads
+    initializeAudioCapture();
 
     const queryParams = new URLSearchParams(window.location.search);
     const selectedLanguage = queryParams.get("lang");

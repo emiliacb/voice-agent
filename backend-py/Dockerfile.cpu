@@ -1,0 +1,42 @@
+# Use Python base image
+FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    build-essential \
+    libopenblas-dev \
+    python3-dev \
+    libsndfile1 \
+    sox \
+    espeak-ng \
+    espeak-ng-espeak \
+    libespeak-ng-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create and set working directory
+WORKDIR /app
+
+# Copy requirements file
+COPY requirements.txt .
+
+# Create and activate virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install phonemizer
+RUN pip install phonemizer
+
+# Copy application code
+COPY . .
+
+# Set default command
+ENTRYPOINT ["python3", "audio_to_visemes_mvp.py"] 

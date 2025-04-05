@@ -6,19 +6,25 @@ A web-based voice agent application with a frontend interface and backend proces
 
 ```
 voice-agent/
-├── frontend/           # Frontend application built with Vite
+├── frontend/
 │   ├── index.html
 │   ├── script.js
 │   ├── style.css
 │   └── package.json
-├── backend/           # Backend Node.js server
+├── backend/
 │   ├── index.mjs
+│   ├── Dockerfile
+│   ├── dev.sh
 │   └── package.json
-├── nginx.conf        # Nginx configuration
-└── dockerfile       # Docker configuration
+└── .gitignore
 ```
 
 ## Local Development
+
+### Requirements
+
+- Node.js (v18+)
+- Docker (v20+)
 
 ### Frontend
 ```bash
@@ -28,39 +34,22 @@ npm run dev
 ```
 
 ### Backend
+
+We provide a development script that automatically rebuilds and restarts the container when you make changes to the backend code:
+
 ```bash
-cd backend
-npm install
-node index.mjs
+# Make the script executable (first time only)
+chmod +x dev.sh
+
+# Start development mode
+./dev.sh
 ```
 
-## Docker Deployment
-
-To build and run the application using Docker:
-
-1. Build the Docker image:
-```bash
-docker build --platform linux/amd64 -t voice-agent:latest .
-```
-
-3. To build the backend container:
-```bash
-docker build --platform linux/amd64 -f Dockerfile.backend -t voice-agent-backend:latest .
-```
-
-3. Run the combined container:
-```bash
-docker run --platform linux/amd64 --name voice-agent --rm -p 8080:80 voice-agent:latest
-```
-
-4. Rebuild and rerun example:
-```bash
-docker build --no-cache --platform linux/amd64 -t voice-agent:latest .
-docker rm -f voice-agent
-docker run --platform linux/amd64 --name voice-agent --rm -p 8080:80 voice-agent:latest
-```
-
-The application will be available at `http://localhost:8080`.
+This will:
+- Build the Docker container
+- Start it in the foreground showing all logs
+- Automatically rebuild and restart when you make changes
+- Make the service available at http://localhost:8080
 
 ## License
 

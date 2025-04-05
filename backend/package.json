@@ -4,6 +4,7 @@
   "main": "index.mjs",
   "type": "module",
   "scripts": {
+    "dev": "chmod +x dev.sh && npx nodemon --watch ./ --ext js,mjs,json,ts,tsx --ignore node_modules/ --exec './dev.sh'",
     "start": "node index.mjs"
   },
   "keywords": [],

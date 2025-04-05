@@ -179,9 +179,11 @@ function animateShapes() {
 
 function stopAnimation() {
     state.isPlaying = false;
+    mouthElement.classList.remove(`cue_${state.previousCue}`);
+    mouthElement.classList.remove(`cue_${state.currentCue}`);
+    mouthElement.classList.add(`cue_${IDLE_SHAPE_ID}`);
     state.previousCue = IDLE_SHAPE_ID;
     state.currentCue = IDLE_SHAPE_ID;
-    mouthElement.classList.add(`cue_${IDLE_SHAPE_ID}`);
 }
 
 async function main() {

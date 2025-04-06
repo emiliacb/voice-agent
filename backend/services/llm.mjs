@@ -49,9 +49,9 @@ export async function generateLLMResponse(userMessage) {
           content: userMessage
         }
       ],
-      max_tokens: 400,
+      max_tokens: 100,
       temperature: 0.8,
-      top_p: 0.8,
+      top_p: 1,
     });
 
     const response = completion.choices[0].message.content;

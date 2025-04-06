@@ -4,6 +4,7 @@ const IDLE_SHAPE_ID = "X";
 const AVAILABLE_LANGUAGES = ["en", "es"];
 const AUDIO_BIT_RATE = 16000;
 const RECORDER_TIME_SLICE = 100; // ms
+const MAX_RECORDING_DURATION = 10000; // 10 seconds
 
 /** Web Worker */
 const audioWorker = new Worker(new URL('./audio-worker.mjs', import.meta.url), {
@@ -47,6 +48,7 @@ const state = new Proxy(
         isLoading: false,
         mediaRecorder: null,
         audioChunks: [],
+        timeoutId: null,
     },
     {
         set(target, prop, value) {
@@ -187,6 +189,11 @@ async function startRecording() {
 
         mediaRecorder.start(RECORDER_TIME_SLICE);
         state.isRecording = true;
+        
+        state.timeoutId = setTimeout(() => {
+            stopRecording();
+        }, MAX_RECORDING_DURATION);
+
     } catch (error) {
         console.error("Error starting recording:", error);
         alert("Could not access microphone");
@@ -198,6 +205,8 @@ async function stopRecording() {
 
     return new Promise((resolve) => {
         mediaRecorder.onstop = async () => {
+            // Clear the timeout if recording stopped manually
+            clearTimeout(state.timeoutId);
             await sendAudioToServer();
 
             // Disable the tracks to save resources

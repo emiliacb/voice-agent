@@ -14,5 +14,9 @@
   "dependencies": {
     "buffer": "^6.0.3",
     "vite": "^6.2.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-legacy": "^6.0.2",
+    "regenerator-runtime": "^0.14.1"
   }
 }

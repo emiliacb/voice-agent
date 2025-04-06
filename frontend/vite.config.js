@@ -1,6 +1,20 @@
 import { defineConfig } from 'vite'
+import legacy from '@vitejs/plugin-legacy'
 
 export default defineConfig({
+  plugins: [
+    legacy({
+      targets: [
+        'defaults',
+        'not IE 11',
+        'Edge >= 79',
+        'Chrome >= 60',
+        'Firefox >= 60',
+        'Safari >= 10.1'
+      ],
+      additionalLegacyPolyfills: ['regenerator-runtime/runtime']
+    })
+  ],
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

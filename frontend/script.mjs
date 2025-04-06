@@ -214,6 +214,8 @@ function setupPushToTalk() {
     pttButton.addEventListener("mousedown", startRecording);
     pttButton.addEventListener("mouseup", stopRecording);
     pttButton.addEventListener("mouseleave", stopRecording);
+    pttButton.addEventListener("touchstart", startRecording);
+    pttButton.addEventListener("touchend", stopRecording);
     pttButton.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
             startRecording();

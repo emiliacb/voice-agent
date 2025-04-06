@@ -9,20 +9,25 @@
         border: none;
         background-color: transparent;
         cursor: pointer;
+        font-family: inherit;
     }
 }
 
 @layer variables {
     :root {
-        --primary-color: #482d8b; /* old: #2f60e7 */
+        --primary-color: #2f60e7; /* old: #2f60e7; new: #482d8b */
         --secondary-color: #9d671b;
         --primary-color-bg: var(--primary-color);
         --secondary-color-bg: var(--secondary-color);
         --primary-color-text: #fff;
         --secondary-color-text: #fff;
 
+        --shadow-buttons-color: #2044a9;
+
         --lips-color: tomato;
         --tongue-color: #c553a7;
+
+        --accent-color: #c553a7;
 
         --system-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
     }
@@ -95,14 +100,47 @@
             opacity: 0;
         }
     }
+
+    @keyframes pulse {
+        0% {
+            filter: brightness(1) saturate(1);
+        }
+
+        50% {
+            filter: brightness(1.1) saturate(0);
+        }
+
+        100% {
+            filter: brightness(1) saturate(1);
+        }
+    }
 }
 
-
 html {
-    font-family: var(--system-font);
+    font-family: "Germania One", var(--system-font);
+    font-weight: 400;
     height: 100svh;
     color: #333;
-    background-image: linear-gradient(to left, rgb(47, 47, 47), black);
+    background-image: linear-gradient(to bottom, wheat 30%, rgb(243, 174, 45));
+    filter: sepia(10%) saturate(90%);
+}
+
+body {
+    position: relative;
+    width: 100%;
+    height: 100%;
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url("./public/texture.jpg");
+        background-size: 100% 100%;
+        mix-blend-mode: darken;
+        filter: blur(1px);
+        background-size: cover;
+        opacity: 0.5;
+    }
 }
 
 .header {
@@ -129,11 +167,14 @@ html {
 
 .button {
     position: relative;
-    padding: 1rem 2rem;
-    border-radius: 1rem;
-    font-size: 1.2rem;
+    padding: 1rem;
+    font-size: 1.8rem;
+    line-height: 2rem;
     user-select: none;
-    border: 1px solid white;
+    width: 10rem;
+    height: 10rem;
+    border-radius: 100%;
+    box-shadow: 3px 4px 0 var(--shadow-buttons-color);
 
     &.primary {
         background-color: var(--primary-color-bg);
@@ -145,9 +186,43 @@ html {
         color: var(--secondary-color-text);
     }
 
+    &:hover {
+        filter: brightness(1.1);
+        box-shadow: 4px 5px 0 var(--shadow-buttons-color);
+        transform: translateY(-1px) rotate(1deg);
+    }
+
+    &:active {
+        filter: brightness(0.9);
+        box-shadow: inset 3px 4px 0 var(--shadow-buttons-color);
+        transform: translate(1px, 1px) rotate(-1deg);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--accent-color);
+        outline-offset: 2px;
+        box-shadow: 3px 4px 0 var(--shadow-buttons-color), 0 0 0 2px white;
+    }
+
     &:disabled {
-        opacity: 0.5;
+        opacity: 0.9;
         cursor: not-allowed;
+        animation: pulse 1s linear infinite;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        background-image: url("./public/wood.webp");
+        z-index: 10;
+        width: 100%;
+        height: 100%;
+        inset: 0;
+        background-size: cover;
+        border-radius: 100%;
+        mix-blend-mode: soft-light;
+        filter: contrast(5) saturate(0) invert(1) brightness(1.2)  ;
+        opacity: 0.2;
     }
 }
 
@@ -180,8 +255,8 @@ html {
     justify-content: center;
     margin-bottom: 5rem;
     overflow: hidden;
-    border: 1px solid white;
     transform: perspective(1000px) rotateX(0) rotateY(0) translateZ(0);
+    filter: saturate(1.5);
 }
 
 /* Scanlines effect */
@@ -222,6 +297,20 @@ html {
     z-index: 11;
     opacity: 0.1;
     filter: blur(10px);
+}
+
+.effect {
+    position: absolute;
+    top: calc(0% - 2.5rem);
+    left: calc(0% - 2.5rem);
+    width: calc(100% + 5rem);
+    height: calc(100% + 5rem);
+    transform: scaleY(1.14);
+    opacity: 0.9;
+    mix-blend-mode: lighten;
+    z-index: 20;
+    border-radius: 10rem;
+    user-select: none;
 }
 
 .mouth {

@@ -6,7 +6,9 @@ const AUDIO_BIT_RATE = 16000;
 const RECORDER_TIME_SLICE = 100; // ms
 
 /** Web Worker */
-const audioWorker = new Worker(new URL('./audioWorker.js', import.meta.url));
+const audioWorker = new Worker(new URL('./audio-worker.mjs', import.meta.url), {
+    type: 'module'
+});
 
 /** DOM Elements */
 let audio, pttButton, mouthElement;
@@ -19,15 +21,17 @@ let mediaRecorder = null;
 const WORDINGS = {
     en: {
         title: "Voice Agent",
-        pttButton: "Hold to Talk",
+        hold: "Hold to Talk",
         recording: "Recording...",
-        sending: "Sending...",
+        sending: "Thinking...",
+        interrupt: "Press to interrupt",
     },
     es: {
         title: "Agente de voz",
-        pttButton: "Pulsar para hablar",
+        hold: "Pulsar para hablar",
         recording: "Grabando...",
-        sending: "Enviando...",
+        sending: "Pensando...",
+        interrupt: "Pulsar para interrumpir",
     },
 };
 let i18n = WORDINGS.en;
@@ -61,7 +65,7 @@ const state = new Proxy(
                         
                     case "isRecording":
                         pttButton.classList.toggle("recording", value);
-                        pttButton.textContent = value ? i18n.recording : i18n.pttButton;
+                        pttButton.textContent = value ? i18n.recording : i18n.hold;
                         pttButton.disabled = false;
                         break;
                         
@@ -69,6 +73,13 @@ const state = new Proxy(
                         if (value) {
                             pttButton.classList.remove("recording");
                             pttButton.textContent = i18n.sending;
+                            pttButton.disabled = value;
+                        }
+                        break;
+
+                    case "isPlaying":
+                        if (value) {
+                            pttButton.textContent = i18n.interrupt;
                             pttButton.disabled = value;
                         }
                         break;
@@ -83,7 +94,7 @@ const state = new Proxy(
     }
 );
 
-async function sendAudioToServer(audioBlob) {
+async function sendAudioToServer() {
     try {
         state.isLoading = true;
 
@@ -94,6 +105,7 @@ async function sendAudioToServer(audioBlob) {
                 if (type === 'AUDIO_PROCESSED') {
                     resolve(data);
                 } else if (type === 'ERROR') {
+                    console.error("Error processing audio:", error);
                     reject(new Error(error));
                 }
             };
@@ -113,10 +125,10 @@ async function sendAudioToServer(audioBlob) {
         
         if (result.mouthCues) {
             state.animation = result.mouthCues;
-            const audioUrl = URL.createObjectURL(result.audioBlob);
+            const audioUrl = URL.createObjectURL(result.responseAudioBlob);
             audio.src = audioUrl;
-            audio.play();
             state.isPlaying = true;
+            audio.play();
             animateShapes();
         }
 
@@ -186,10 +198,7 @@ async function stopRecording() {
 
     return new Promise((resolve) => {
         mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(state.audioChunks, {
-                type: "audio/webm;codecs=opus",
-            });
-            await sendAudioToServer(audioBlob);
+            await sendAudioToServer();
 
             // Disable the tracks to save resources
             audioStream.getTracks().forEach(track => track.enabled = false);
@@ -205,8 +214,16 @@ function setupPushToTalk() {
     pttButton.addEventListener("mousedown", startRecording);
     pttButton.addEventListener("mouseup", stopRecording);
     pttButton.addEventListener("mouseleave", stopRecording);
-    pttButton.addEventListener("touchstart", startRecording);
-    pttButton.addEventListener("touchend", stopRecording);
+    pttButton.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            startRecording();
+        }
+    });
+    pttButton.addEventListener("keyup", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            stopRecording();
+        }
+    });
 }
 
 function initialize() {
@@ -229,7 +246,7 @@ function initialize() {
 
     document.title = i18n.title;
     document.documentElement.setAttribute("lang", preferedLanguage);
-    pttButton.textContent = i18n.pttButton;
+    pttButton.textContent = i18n.hold;
 }
 
 function animateShapes() {

@@ -1,50 +1,77 @@
-import { promises as fs } from 'fs';
-import { spawn } from 'child_process';
+import { promises as fs } from 'node:fs';
+import { spawn } from 'node:child_process';
+
 import { Log } from '../utils/logger.mjs';
+import { convertToWav } from '../utils/audio.mjs';
 
-export async function processAudioWithRhubarb(audioFile) {
-  const buffer = Buffer.from(await audioFile.arrayBuffer());
-  const contentType = audioFile.type;
-
+export async function processAudioWithRhubarb(audioBuffer) {
   // Generate unique file paths
   const timestamp = Date.now();
-  const originalPath = `/tmp/original-${timestamp}`;
   const inputPath = `/tmp/input-${timestamp}.wav`;
   const outputPath = `/tmp/output-${timestamp}.json`;
 
-  // Write the original file
-  await fs.writeFile(originalPath, buffer);
-
-  Log.info(`Processing audio file of type: ${contentType}`);
-
   try {
-    // Convert to WAV using FFmpeg if the file is WebM
-    if (contentType.startsWith('audio/webm')) {
-      await convertToWav(originalPath, inputPath);
-      await verifyAudioFormat(inputPath);
-    } else {
-      // If it's already a WAV file, just copy it
-      Log.info('Copying WAV file directly...');
-      await fs.copyFile(originalPath, inputPath);
+    Log.info(`Writing audio buffer to file at ${inputPath}...`);
+    Log.info(`Audio buffer type: ${typeof audioBuffer}, length: ${audioBuffer?.length || 'unknown'}`);
+
+    // Ensure audioBuffer is valid
+    if (!audioBuffer || !Buffer.isBuffer(audioBuffer)) {
+      throw new Error(`Invalid audio buffer: ${typeof audioBuffer}`);
     }
 
-    // Cleanup original file
-    await fs.unlink(originalPath);
-    
-    // Process with Rhubarb
-    const result = await runRhubarb(inputPath, outputPath);
+    // Convert audioBuffer to WAV format
+    const wavBuffer = await convertToWav(audioBuffer);
+
+    // Split audio into 30-second chunks for better processing
+    const CHUNK_DURATION_MS = 30000; // 30 seconds
+    const SAMPLE_RATE = 44100;
+    const BYTES_PER_SAMPLE = 2; // 16-bit audio
+    const CHANNELS = 1; // Mono
+    const BYTES_PER_MS = (SAMPLE_RATE * BYTES_PER_SAMPLE * CHANNELS) / 1000;
+    const CHUNK_SIZE = Math.floor(CHUNK_DURATION_MS * BYTES_PER_MS);
+
+    // Calculate number of chunks
+    const numChunks = Math.ceil(wavBuffer.length / CHUNK_SIZE);
+    Log.info(`Splitting audio into ${numChunks} chunks of ${CHUNK_DURATION_MS}ms each`);
+
+    let allResults = [];
+    for (let i = 0; i < numChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, wavBuffer.length);
+        const chunk = wavBuffer.slice(start, end);
+
+        // Write the chunk to a temporary file
+        const chunkPath = `${inputPath}-chunk${i}.wav`;
+        await fs.writeFile(chunkPath, chunk);
+        Log.info(`Successfully wrote chunk ${i + 1}/${numChunks} to ${chunkPath}, size: ${(await fs.stat(chunkPath)).size} bytes`);
+
+        // Process chunk with Rhubarb
+        const chunkResult = await runRhubarb(chunkPath, outputPath);
+        allResults.push(chunkResult);
+
+        // Cleanup chunk file
+        await fs.unlink(chunkPath);
+    }
+
+    // Merge results from all chunks
+    const result = {
+        mouthCues: allResults.reduce((acc, curr) => {
+            if (curr && curr.mouthCues) {
+                acc.push(...curr.mouthCues);
+            }
+            return acc;
+        }, []).sort((a, b) => a.start - b.start)
+    };
 
     // Cleanup temp files
-    await fs.unlink(inputPath);
-    await fs.unlink(outputPath);
+    await fs.unlink(outputPath).catch(e => Log.info(`Cleanup: ${e.message}`));
 
     return result;
   } catch (error) {
+    Log.error(`Error in processAudioWithRhubarb: ${error.message}`);
     // Cleanup any remaining temp files
     try {
-      await fs.unlink(originalPath).catch(() => {});
-      await fs.unlink(inputPath).catch(() => {});
-      await fs.unlink(outputPath).catch(() => {});
+      await fs.unlink(outputPath).catch((e) => Log.error(`Failed to delete output file: ${e.message}`));
     } catch (cleanupError) {
       Log.error(`Error during cleanup: ${cleanupError}`);
     }
@@ -52,92 +79,54 @@ export async function processAudioWithRhubarb(audioFile) {
   }
 }
 
-async function convertToWav(inputPath, outputPath) {
-  Log.info('Converting WebM to WAV...');
-  const ffmpegProc = spawn('ffmpeg', [
-    '-y',
-    '-i', inputPath,
-    '-vn',
-    '-c:a', 'pcm_s16le',
-    '-ar', '16000',
-    '-ac', '1',
-    '-f', 'wav',
-    '-rf64', 'auto',
-    outputPath
-  ]);
-
-  let ffmpegStderr = '';
-  ffmpegProc.stderr.on('data', (data) => {
-    ffmpegStderr += data.toString();
-    Log.info(`FFmpeg: ${data.toString().trim()}`);
-  });
-
-  await new Promise((resolve, reject) => {
-    ffmpegProc.on('close', (code) => {
-      if (code === 0) {
-        Log.info('FFmpeg conversion completed successfully');
-        resolve();
-      } else {
-        reject(new Error(`FFmpeg failed with code ${code}. Error: ${ffmpegStderr}`));
-      }
-    });
-    ffmpegProc.on('error', reject);
-  });
-}
-
-async function verifyAudioFormat(filePath) {
-  const ffprobeProc = spawn('ffprobe', [
-    '-v', 'error',
-    '-show_entries', 'stream=codec_name,codec_type,sample_rate,channels',
-    '-of', 'default=noprint_wrappers=1',
-    filePath
-  ]);
-
-  let ffprobeOutput = '';
-  ffprobeProc.stdout.on('data', (data) => {
-    ffprobeOutput += data.toString();
-  });
-
-  await new Promise((resolve, reject) => {
-    ffprobeProc.on('close', (code) => {
-      if (code === 0) {
-        Log.info(`FFprobe output: ${ffprobeOutput}`);
-        resolve();
-      } else {
-        reject(new Error(`FFprobe failed with code ${code}`));
-      }
-    });
-  });
-}
-
 async function runRhubarb(inputPath, outputPath) {
-  Log.info('Starting Rhubarb processing...');
+  Log.info(`Starting Rhubarb processing on ${inputPath}...`);
   
-  const proc = spawn('rhubarb', [
-    inputPath,
-    '-o', outputPath,
-    '--exportFormat', 'json',
-    '--recognizer', 'phonetic',
-    '--machineReadable',
-    '--quiet'
-  ]);
+  try {
+    const proc = spawn('rhubarb', [
+      inputPath,
+      '-o', outputPath,
+      '--exportFormat', 'json',
+      '--recognizer', 'phonetic',
+      '--machineReadable',
+      '--quiet'
+    ]);
 
-  let stderr = '';
-  proc.stderr.on('data', (data) => {
-    stderr += data.toString();
-  });
-
-  await new Promise((resolve, reject) => {
-    proc.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`Process exited with code ${code}. Error: ${stderr}`));
+    let stderr = '';
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+      if (stderr) Log.error(`Rhubarb stderr: ${stderr}`);
     });
-    proc.on('error', reject);
-  });
 
-  const resultText = await fs.readFile(outputPath, 'utf-8');
-  const result = JSON.parse(resultText);
-  
-  Log.info(`Result: ${result}`);
-  return result;
+    let stdout = '';
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString();
+      if (stdout) Log.info(`Rhubarb stdout: ${stdout}`);
+    });
+
+    await new Promise((resolve, reject) => {
+      proc.on('close', (code) => {
+        if (code === 0) {
+          Log.info('Rhubarb processing completed successfully');
+          resolve();
+        } else {
+          reject(new Error(`Rhubarb process exited with code ${code}. Error: ${stderr}`));
+        }
+      });
+      proc.on('error', (err) => {
+        reject(new Error(`Failed to start Rhubarb: ${err.message}`));
+      });
+    });
+
+    Log.info(`Reading Rhubarb output from ${outputPath}`);
+    const resultText = await fs.readFile(outputPath, 'utf-8');
+    const result = JSON.parse(resultText);
+    Log.info('Successfully parsed Rhubarb output');
+
+    return result;
+  } catch (error) {
+    Log.error(`Rhubarb processing failed: ${error.message}`);
+    // If Rhubarb fails, return empty mouthCues array to continue app flow
+    return { mouthCues: [] };
+  }
 } 

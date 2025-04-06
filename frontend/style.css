@@ -11,6 +11,11 @@
         cursor: pointer;
         font-family: inherit;
     }
+
+    a {
+        text-decoration: none;
+        color: inherit;
+    }
 }
 
 @layer variables {
@@ -140,6 +145,8 @@ body {
         filter: blur(1px);
         background-size: cover;
         opacity: 0.5;
+        user-select: none;
+        z-index: -1;
     }
 }
 
@@ -163,6 +170,11 @@ body {
         flex-direction: column;
         gap: 10px;
     }
+}
+
+.shapes {
+    justify-content: space-evenly !important;
+    height: 100dvh;
 }
 
 .button {
@@ -239,13 +251,20 @@ body {
     animation: ping 1s linear infinite;
 }
 
+#lang-selector {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    font-size: 1rem;
+    padding: 0.5rem;
+}
+
 #audio {
     display: none;
 }
 
 #avatar {
     position: relative;
-    margin-top: 8rem;
     width: 20rem;
     height: 20rem;
     background-color: rgb(47, 47, 47);
@@ -253,10 +272,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 5rem;
     overflow: hidden;
     transform: perspective(1000px) rotateX(0) rotateY(0) translateZ(0);
     filter: saturate(1.5);
+    margin-bottom: -5rem;
 }
 
 /* Scanlines effect */
@@ -278,6 +297,7 @@ body {
     filter: brightness(1.5);
     animation: scanlines 10s linear infinite;
     z-index: 10;
+    user-select: none;
 }
 
 #avatar::after {
@@ -297,6 +317,7 @@ body {
     z-index: 11;
     opacity: 0.1;
     filter: blur(10px);
+    user-select: none;
 }
 
 .effect {

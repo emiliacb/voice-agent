@@ -11,7 +11,7 @@ const audioWorker = new Worker(new URL('./audio-worker.mjs', import.meta.url), {
 });
 
 /** DOM Elements */
-let audio, pttButton, mouthElement;
+let audio, pttButton, mouthElement, langSelector;
 
 // Pre-initialized stream and recorder
 let audioStream = null;
@@ -229,6 +229,7 @@ function setupPushToTalk() {
 function initialize() {
     audio = document.getElementById("audio");
     pttButton = document.getElementById("pttButton");
+    langSelector = document.getElementById("lang-selector");
     mouthElement = document.querySelector(".mouth");
     setupPushToTalk();
     
@@ -247,6 +248,8 @@ function initialize() {
     document.title = i18n.title;
     document.documentElement.setAttribute("lang", preferedLanguage);
     pttButton.textContent = i18n.hold;
+    langSelector.textContent = preferedLanguage === "es" ? "English" : "Español";
+    langSelector.setAttribute("href", `/?lang=${preferedLanguage === "es" ? "en" : "es"}`);
 }
 
 function animateShapes() {

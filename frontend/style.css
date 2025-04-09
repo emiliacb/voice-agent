@@ -150,7 +150,7 @@ body {
         content: '';
         position: absolute;
         inset: 0;
-        background-image: url("./texture.jpg");
+        background-image: url("/texture.jpg");
         background-size: 100% 100%;
         mix-blend-mode: darken;
         background-size: cover;
@@ -243,7 +243,7 @@ body {
     &::after {
         content: '';
         position: absolute;
-        background-image: url("./wood.webp");
+        background-image: url("/wood.webp");
         z-index: 10;
         width: 100%;
         height: 100%;

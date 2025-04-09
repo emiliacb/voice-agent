@@ -99,19 +99,26 @@ export async function sendAudioToServer() {
         const workerResponse = new Promise((resolve, reject) => {
             audioWorker.onmessage = (e) => {
                 const { type, data, error } = e.data;
-                if (type === "AUDIO_PROCESSED") {
-                    resolve(data);
-                } else if (type === "ERROR") {
-                    if (error === "Too many requests") {
-                        showError(appState.domElements.i18n.rateLimit);
+                switch (type) {
+                    case "AUDIO_PROCESSED":
+                        resolve(data);
+                        break;
+                    case "ERROR":
+                        console.log("Error:", JSON.stringify(error, null, 2));
+                        if (error.message === "Individual rate limit exceeded") {
+                            showError(appState.domElements.i18n.individualRateLimit);
+                        }
+
+                        if (error.message === "Collective rate limit exceeded") {
+                            showError(appState.domElements.i18n.collectiveRateLimit);
+                        }
+
                         appState.state.isRecording = false;
                         appState.domElements.pttButton.disabled = true;
                         appState.domElements.pttButton.classList.remove("recording");
-                        return;
-                    }
-
-                    console.error("Error processing audio:", error);
-                    reject(new Error(error));
+                        console.error("Error processing audio:", error);
+                        reject(new Error(error));
+                        break;
                 }
             };
         });

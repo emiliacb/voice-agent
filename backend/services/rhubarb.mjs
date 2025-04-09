@@ -126,7 +126,7 @@ async function runRhubarb(inputPath, outputPath) {
     return result;
   } catch (error) {
     Log.error(`Rhubarb processing failed: ${error.message}`);
-    // If Rhubarb fails, return empty mouthCues array to continue app flow
+    // Gracefull degradation: If Rhubarb fails, return empty mouthCues array to continue app flow
     return { mouthCues: [] };
   }
-} 
+}

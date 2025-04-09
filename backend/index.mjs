@@ -44,10 +44,18 @@ app.use("*", async (c, next) => {
 app.use("*", async (c, next) => {
   try {
     await ipLimiter.consume(c.req.ip);
+    await next();
+  } catch (error) {
+    return c.json({ error: 'Individual rate limit exceeded' }, 429);
+  }
+});
+
+app.use("*", async (c, next) => {
+  try {
     await routeLimiter.consume(c.req.url);
     await next();
   } catch (error) {
-    return c.json({ error: 'Too many requests' }, 429);
+    return c.json({ error: 'Collective rate limit exceeded' }, 429);
   }
 });
 

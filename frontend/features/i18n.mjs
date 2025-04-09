@@ -12,7 +12,8 @@ export const WORDINGS = {
         sending: "Thinking...",
         play: "Play response",
         disclaimer: "We recommend using Google Chrome for the best experience.",
-        rateLimit: "We are getting too much messages, please try again later.",
+        individualRateLimit: "You have reached your individual limit of 10 requests per hour.",
+        collectiveRateLimit: "We are getting too much messages, please try again later.",
     },
     es: {
         title: "Agente de voz",
@@ -21,7 +22,8 @@ export const WORDINGS = {
         sending: "Pensando...",
         play: "Reproducir respuesta",
         disclaimer: "Recomendamos usar Google Chrome para una mejor experiencia.",
-        rateLimit: "Estamos recibiendo demasiados mensajes, por favor intentá de nuevo más tarde.",
+        individualRateLimit: "Alcanzaste tu límite individual de 10 solicitudes por hora.",
+        collectiveRateLimit: "Estamos recibiendo demasiados mensajes, por favor intentá de nuevo más tarde.",
     },
 };
 

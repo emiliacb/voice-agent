@@ -59,7 +59,7 @@ async function sendAudioToServer({audioChunks, backendUrl, currentLanguage}) {
         console.error("Error processing audio:", error);
         self.postMessage({
             type: 'ERROR',
-            error: error.message
+            error: error
         });
     }
 } 

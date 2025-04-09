@@ -19,7 +19,11 @@
     <audio id="audio" src=""></audio>
     <a href="/?lang=es" id="langSelector">Español</a>
     
-    <div id="errorMessage"></div>
+    <div class="container row">
+        <div id="errorMessage"></div>
+        <button id="closeErrorMessage">❌</button>
+    </div>
+
     <div class="shapes container column">
         <div id="avatar">
             <div class="mouth cue_X">
@@ -35,7 +39,7 @@
                 <div class="upper_lips"></div>
                 <div class="lower_lips"></div>
             </div>
-            <img src="/public/effect.png" alt="" class="effect" draggable="false">
+            <img src="/effect.png" alt="" class="effect" draggable="false">
             <button id="playButton" class="button ghost">Play</button>
         </div>
 

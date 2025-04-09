@@ -2,6 +2,7 @@ import appState from './state.mjs';
 import { animateShapes, stopAnimation } from './animation.mjs';
 import { getRecordType } from '../utils/get-record-type.mjs';
 import { playIfSupported } from '../utils/get-play-permissions.mjs';
+import { showError } from '../utils/error.mjs';
 
 // Constants
 export const AUDIO_BIT_RATE = 16000;
@@ -101,6 +102,13 @@ export async function sendAudioToServer() {
                 if (type === "AUDIO_PROCESSED") {
                     resolve(data);
                 } else if (type === "ERROR") {
+                    if (error === "Too many requests") {
+                        showError(appState.domElements.i18n.rateLimit);
+                        appState.state.isRecording = false;
+                        appState.domElements.pttButton.disabled = true;
+                        return;
+                    }
+
                     console.error("Error processing audio:", error);
                     reject(new Error(error));
                 }

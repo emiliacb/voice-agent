@@ -17,6 +17,7 @@
     "form-data": "^4.0.2",
     "hono": "^4.1.0",
     "openai": "^4.91.1",
+    "rate-limiter-flexible": "^7.0.0",
     "replicate": "^1.0.1"
   }
 }

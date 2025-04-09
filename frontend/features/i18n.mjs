@@ -11,7 +11,8 @@ export const WORDINGS = {
         recording: "Recording...",
         sending: "Thinking...",
         play: "Play response",
-        errorMessage: "We recommend using Google Chrome for the best experience.",
+        disclaimer: "We recommend using Google Chrome for the best experience.",
+        rateLimit: "We are getting too much messages, please try again later.",
     },
     es: {
         title: "Agente de voz",
@@ -19,7 +20,8 @@ export const WORDINGS = {
         recording: "Grabando...",
         sending: "Pensando...",
         play: "Reproducir respuesta",
-        errorMessage: "We recommend using Google Chrome for the best experience.",
+        disclaimer: "Recomendamos usar Google Chrome para una mejor experiencia.",
+        rateLimit: "Estamos recibiendo demasiados mensajes, por favor intentá de nuevo más tarde.",
     },
 };
 
@@ -48,13 +50,8 @@ export function setUpLanguageSelector() {
     document.documentElement.setAttribute("lang", currentLanguage);
     appState.state.currentLanguage = currentLanguage;
     pttButton.textContent = i18n.hold;
-    errorMessage.innerHTML = i18n.errorMessage;
+    errorMessage.textContent = i18n.errorMessage;
     playButton.textContent = i18n.play;
-
-    const isChrome = navigator.userAgent.includes("Chrome");
-    if (!isChrome) {
-        errorMessage.style.display = "block";
-    }
     
     langSelector.textContent = currentLanguage === "es" ? "English" : "Español";
     langSelector.setAttribute(

@@ -37,6 +37,10 @@ async function sendAudioToServer({audioChunks, backendUrl, currentLanguage}) {
 
         const responseData = await response.json();
         
+        if (!response.ok) {
+            throw new Error(responseData.error);
+        }
+
         const audioPart = responseData.audio;
         const mouthCues = responseData.mouthCues;
         

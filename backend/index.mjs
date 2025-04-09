@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
+import { RateLimiterMemory } from "rate-limiter-flexible";
 
 import { Log } from './utils/logger.mjs';
 import { convertToWav } from './utils/audio.mjs';
@@ -14,15 +15,41 @@ config();
 
 const app = new Hono();
 
+const ipLimiter = new RateLimiterMemory({
+  points: 10,
+  duration: 5 * 60 * 60, // 5 hours
+});
+
+const routeLimiter = new RateLimiterMemory({
+  points: 80,
+  duration: 1 * 60 * 60, // 1 hour
+});
+
 app.use('*', cors({
   origin: process.env.ALLOWED_ORIGINS.split(','),
   credentials: true,
 }));
 
 app.use("*", async (c, next) => {
-  Log.info(`${c.req.method} ${c.req.url}`);
+  Log.info(JSON.stringify({
+    method: c.req.method,
+    url: c.req.url,
+    ip: c.req.ip,
+    userAgent: c.req.header('User-Agent'),
+    origin: c.req.header('Origin')
+  }, null, 2));
   await next();
 })
+
+app.use("*", async (c, next) => {
+  try {
+    await ipLimiter.consume(c.req.ip);
+    await routeLimiter.consume(c.req.url);
+    await next();
+  } catch (error) {
+    return c.json({ error: 'Too many requests' }, 429);
+  }
+});
 
 app.post('/rhubarb', async (c) => {
   try {

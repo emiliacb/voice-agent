@@ -34,7 +34,7 @@ function initialize() {
     // Show disclaimer if not Chrome
     const isChrome = navigator.userAgent.includes("Chrome");
     if (!isChrome) {
-        showError(appState.i18n.disclaimer);
+        showError(appState.domElements.i18n.disclaimer);
     }
 }
 

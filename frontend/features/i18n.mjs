@@ -16,7 +16,7 @@ export const WORDINGS = {
     },
     es: {
         title: "Agente de voz",
-        hold: "Pulsar para hablar",
+        hold: "Sostener para hablar",
         recording: "Grabando...",
         sending: "Pensando...",
         play: "Reproducir respuesta",

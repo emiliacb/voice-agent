@@ -16,7 +16,7 @@ config();
 const app = new Hono();
 
 const ipLimiter = new RateLimiterMemory({
-  points: 10,
+  points: 15,
   duration: 3 * 60 * 60, // 3 hours
 });
 

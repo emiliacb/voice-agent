@@ -16,13 +16,13 @@ config();
 const app = new Hono();
 
 const ipLimiter = new RateLimiterMemory({
-  points: 15,
-  duration: 3 * 60 * 60, // 3 hours
+  points: 5,
+  duration: 60,
 });
 
 const routeLimiter = new RateLimiterMemory({
-  points: 100,
-  duration: 1 * 60 * 60, // 1 hour
+  points: 20,
+  duration: 60,
 });
 
 app.use('*', cors({

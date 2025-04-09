@@ -46,6 +46,7 @@ app.post('/rhubarb', async (c) => {
 
 app.post('/message', async (c) => {
   try {
+    const currentLanguage = c.req.query('lang');
     const formData = await c.req.formData();
     const audioFile = formData.get('audio');
 
@@ -62,7 +63,7 @@ app.post('/message', async (c) => {
     const transcriptionResult = await transcribeAudioOpenAI(wavFile);
 
     // Generate LLM response
-    const llmResult = await generateLLMResponse(transcriptionResult.transcription);
+    const llmResult = await generateLLMResponse(transcriptionResult.transcription, currentLanguage);
 
     // Generate audio from LLM response
     const responseAudioBuffer = await generateAudioFromText(llmResult);

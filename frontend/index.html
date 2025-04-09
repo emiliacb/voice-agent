@@ -17,9 +17,9 @@
 </head>
 <body>
     <audio id="audio" src=""></audio>
-    <a href="/?lang=es" id="lang-selector">🇪🇸</a>
+    <a href="/?lang=es" id="langSelector">Español</a>
     
-    <div id="error-message"></div>
+    <div id="errorMessage"></div>
     <div class="shapes container column">
         <div id="avatar">
             <div class="mouth cue_X">
@@ -36,12 +36,13 @@
                 <div class="lower_lips"></div>
             </div>
             <img src="/public/effect.png" alt="" class="effect" draggable="false">
+            <button id="playButton" class="button ghost">Play</button>
         </div>
 
         <div class="container column">
             <button id="pttButton" class="button primary"></button>
         </div>
     </div>
-    <script type="module" src="/script.mjs" defer></script>
+    <script type="module" src="/main.mjs" defer></script>
 </body>
 </html>

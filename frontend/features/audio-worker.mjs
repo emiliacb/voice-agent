@@ -1,23 +1,17 @@
 import { Buffer } from 'buffer';
+import { getRecordType } from '../utils/get-record-type.mjs';
 
 self.onmessage = async function(e) {
     const { type, data } = e.data;
     
     switch (type) {
         case 'SEND_AUDIO':
-            await sendAudioToServer(data.audioChunks, data.backendUrl);
+            await sendAudioToServer(data);
             break;
     }
 };
 
-const getRecordType = () => {
-    if (typeof MediaRecorder === 'function' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        return 'audio/webm;codecs=opus';
-    }
-    return 'audio/mp4';
-}
-
-async function sendAudioToServer(audioChunks, backendUrl) {
+async function sendAudioToServer({audioChunks, backendUrl, currentLanguage}) {
     try {
         // Check if audioChunks is empty or too short
         if (!audioChunks || audioChunks.length === 0) {
@@ -35,7 +29,7 @@ async function sendAudioToServer(audioChunks, backendUrl) {
         const formData = new FormData();
         formData.append("audio", audioBlob);
 
-        const response = await fetch(`${backendUrl}/message`, {
+        const response = await fetch(`${backendUrl}/message?lang=${currentLanguage}`, {
             method: "POST",
             body: formData,
             credentials: "include"

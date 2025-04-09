@@ -18,8 +18,7 @@ export async function generateAudioFromText(text) {
       voice: "verse",
       response_format: "wav",
       input: text,
-      instructions: `When speaking spanish: STRONG Spanish Argentine accent. The 'll' should sound like 'sh', 'z' should sound like 'ss' and 'v' should sound like 'b'.
-      When speaking english or other languages: Keep the correct pronunciation and phonetics for the language, with an subtle Argentine or spanish accent.`
+      instructions: `Argentine accent. The 'll' should sound like 'sh', 'z' should sound like 'ss' and 'v' should sound like 'b'.`
     });
 
     Log.info("OpenAI TTS API response received");

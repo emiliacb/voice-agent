@@ -10,6 +10,13 @@ self.onmessage = async function(e) {
     }
 };
 
+const getRecordType = () => {
+    if (typeof MediaRecorder === 'function' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        return 'audio/webm;codecs=opus';
+    }
+    return 'audio/mp4';
+}
+
 async function sendAudioToServer(audioChunks, backendUrl) {
     try {
         // Check if audioChunks is empty or too short
@@ -20,19 +27,10 @@ async function sendAudioToServer(audioChunks, backendUrl) {
             });
             return;
         }
-        
-        const audioBlob = new Blob(audioChunks, {
-            type: "audio/webm;codecs=opus",
+
+        let audioBlob = new Blob(audioChunks, {
+            type: getRecordType(),
         });
-        
-        // Check if audio duration is too short (less than 500ms)
-        if (audioBlob.size < 1000) {
-            self.postMessage({
-                type: 'ERROR',
-                error: 'Audio recording too short'
-            });
-            return;
-        }
 
         const formData = new FormData();
         formData.append("audio", audioBlob);

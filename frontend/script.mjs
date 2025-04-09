@@ -3,16 +3,16 @@ const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 const IDLE_SHAPE_ID = "X";
 const AVAILABLE_LANGUAGES = ["en", "es"];
 const AUDIO_BIT_RATE = 16000;
-const RECORDER_TIME_SLICE = 100; // ms
-const MAX_RECORDING_DURATION = 10000; // 10 seconds
+const RECORDER_TIME_SLICE = 100;
+const MAX_RECORDING_DURATION = 10000;
 
 /** Web Worker */
-const audioWorker = new Worker(new URL('./audio-worker.mjs', import.meta.url), {
-    type: 'module'
+const audioWorker = new Worker(new URL("./audio-worker.mjs", import.meta.url), {
+    type: "module",
 });
 
 /** DOM Elements */
-let audio, pttButton, mouthElement, langSelector;
+let audio, pttButton, mouthElement, langSelector, errorMessage;
 
 // Pre-initialized stream and recorder
 let audioStream = null;
@@ -64,13 +64,13 @@ const state = new Proxy(
                             mouthElement.classList.add(`cue_${target.currentCue}`);
                         }
                         break;
-                        
+
                     case "isRecording":
                         pttButton.classList.toggle("recording", value);
                         pttButton.textContent = value ? i18n.recording : i18n.hold;
                         pttButton.disabled = false;
                         break;
-                        
+
                     case "isLoading":
                         if (value) {
                             pttButton.classList.remove("recording");
@@ -96,6 +96,35 @@ const state = new Proxy(
     }
 );
 
+function stopAnimation() {
+    state.isPlaying = false;
+    mouthElement.classList.remove(`cue_${state.previousCue}`);
+    mouthElement.classList.remove(`cue_${state.currentCue}`);
+    mouthElement.classList.add(`cue_${IDLE_SHAPE_ID}`);
+    state.previousCue = IDLE_SHAPE_ID;
+    state.currentCue = IDLE_SHAPE_ID;
+}
+
+function animateShapes() {
+    if (!state.isPlaying) return;
+
+    const currentTime = audio.currentTime + 0.15;
+
+    if (currentTime >= audio.duration) {
+        stopAnimation();
+        return;
+    }
+
+    const activeCue = state.animation.find(
+        (cue) => currentTime >= cue.start && currentTime < cue.end
+    );
+
+    state.previousCue = state.currentCue;
+    state.currentCue = activeCue?.value || state.previousCue;
+
+    requestAnimationFrame(animateShapes);
+}
+
 async function sendAudioToServer() {
     try {
         state.isLoading = true;
@@ -104,9 +133,9 @@ async function sendAudioToServer() {
         const workerResponse = new Promise((resolve, reject) => {
             audioWorker.onmessage = (e) => {
                 const { type, data, error } = e.data;
-                if (type === 'AUDIO_PROCESSED') {
+                if (type === "AUDIO_PROCESSED") {
                     resolve(data);
-                } else if (type === 'ERROR') {
+                } else if (type === "ERROR") {
                     console.error("Error processing audio:", error);
                     reject(new Error(error));
                 }
@@ -115,16 +144,15 @@ async function sendAudioToServer() {
 
         // Send audio chunks to worker
         audioWorker.postMessage({
-            type: 'SEND_AUDIO',
+            type: "SEND_AUDIO",
             data: {
                 audioChunks: state.audioChunks,
-                backendUrl: BACKEND_BASE_URL
-            }
+                backendUrl: BACKEND_BASE_URL,
+            },
         });
 
-        // Wait for worker response
         const result = await workerResponse;
-        
+
         if (result.mouthCues) {
             state.animation = result.mouthCues;
             const audioUrl = URL.createObjectURL(result.responseAudioBlob);
@@ -135,28 +163,29 @@ async function sendAudioToServer() {
         }
 
         state.isLoading = false;
-
     } catch (error) {
         state.isLoading = false;
         console.error("Error processing audio:", error);
     }
 }
 
-// Initialize audio recording capabilities
 async function initializeAudioCapture() {
     try {
-        audioStream = await navigator.mediaDevices.getUserMedia({ 
+        if (typeof MediaRecorder === "undefined") {
+        }
+
+        audioStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 channelCount: 1,
-                sampleRate: AUDIO_BIT_RATE
-            } 
+                sampleRate: AUDIO_BIT_RATE,
+            },
         });
         mediaRecorder = new MediaRecorder(audioStream, {
             mimeType: "audio/webm;codecs=opus",
             audioBitsPerSecond: AUDIO_BIT_RATE,
         });
-        // Pause the tracks until needed
-        audioStream.getTracks().forEach(track => track.enabled = false);
+
+        audioStream.getTracks().forEach((track) => (track.enabled = false));
     } catch (error) {
         console.error("Error initializing audio capture:", error);
     }
@@ -171,32 +200,22 @@ async function startRecording() {
     }
 
     try {
-        // If we don't have a mediaRecorder or it's inactive, initialize it
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
             await initializeAudioCapture();
         }
 
         state.audioChunks = [];
-        
-        // Enable the audio tracks
-        audioStream.getTracks().forEach(track => track.enabled = true);
+        audioStream.getTracks().forEach((track) => (track.enabled = true));
 
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                state.audioChunks.push(event.data);
-            }
-        };
+        mediaRecorder.ondataavailable = ({ data }) =>
+            data.size > 0 && state.audioChunks.push(data);
 
         mediaRecorder.start(RECORDER_TIME_SLICE);
         state.isRecording = true;
-        
-        state.timeoutId = setTimeout(() => {
-            stopRecording();
-        }, MAX_RECORDING_DURATION);
-
+        state.timeoutId = setTimeout(stopRecording, MAX_RECORDING_DURATION);
     } catch (error) {
-        console.error("Error starting recording:", error);
-        alert("Could not access microphone");
+        console.error("Recording failed:", error);
+        state.isRecording = false;
     }
 }
 
@@ -210,7 +229,7 @@ async function stopRecording() {
             await sendAudioToServer();
 
             // Disable the tracks to save resources
-            audioStream.getTracks().forEach(track => track.enabled = false);
+            audioStream.getTracks().forEach((track) => (track.enabled = false));
             state.isRecording = false;
             resolve();
         };
@@ -237,16 +256,7 @@ function setupPushToTalk() {
     });
 }
 
-function initialize() {
-    audio = document.getElementById("audio");
-    pttButton = document.getElementById("pttButton");
-    langSelector = document.getElementById("lang-selector");
-    mouthElement = document.querySelector(".mouth");
-    setupPushToTalk();
-    
-    // Initialize audio capture when the page loads
-    initializeAudioCapture();
-
+function setUpLanguageSelector() {
     const queryParams = new URLSearchParams(window.location.search);
     const selectedLanguage = queryParams.get("lang");
     const navigatorLanguage = navigator.language.split("-")[0];
@@ -260,36 +270,21 @@ function initialize() {
     document.documentElement.setAttribute("lang", preferedLanguage);
     pttButton.textContent = i18n.hold;
     langSelector.textContent = preferedLanguage === "es" ? "English" : "Español";
-    langSelector.setAttribute("href", `/?lang=${preferedLanguage === "es" ? "en" : "es"}`);
-}
-
-function animateShapes() {
-    if (!state.isPlaying) return;
-
-    const currentTime = audio.currentTime + 0.15;
-
-    if (currentTime >= audio.duration) {
-        stopAnimation();
-        return;
-    }
-
-    const activeCue = state.animation.find(
-        (cue) => currentTime >= cue.start && currentTime < cue.end
+    langSelector.setAttribute(
+        "href",
+        `/?lang=${preferedLanguage === "es" ? "en" : "es"}`
     );
-
-    state.previousCue = state.currentCue;
-    state.currentCue = activeCue?.value || state.previousCue;
-
-    requestAnimationFrame(animateShapes);
 }
 
-function stopAnimation() {
-    state.isPlaying = false;
-    mouthElement.classList.remove(`cue_${state.previousCue}`);
-    mouthElement.classList.remove(`cue_${state.currentCue}`);
-    mouthElement.classList.add(`cue_${IDLE_SHAPE_ID}`);
-    state.previousCue = IDLE_SHAPE_ID;
-    state.currentCue = IDLE_SHAPE_ID;
+function initialize() {
+    audio = document.getElementById("audio");
+    pttButton = document.getElementById("pttButton");
+    langSelector = document.getElementById("lang-selector");
+    mouthElement = document.querySelector(".mouth");
+    errorMessage = document.getElementById("error-message");
+
+    setupPushToTalk();
+    setUpLanguageSelector();
 }
 
 async function main() {

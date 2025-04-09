@@ -336,10 +336,10 @@ body {
     background-size: 100% 5px;
     filter: blur(1px);
     rotate: 3deg;
-    opacity: 0.5;
-    mix-blend-mode: darken;
+    opacity: 0.3;
+    mix-blend-mode: soft-light;
     filter: contrast(1.5) saturate(0);
-    /* animation: scanlines 10s linear infinite; */
+    animation: scanlines 10s linear infinite; 
     z-index: 200;
     user-select: none;
     border-radius: 1rem;

@@ -7,7 +7,7 @@ import { showError } from '../utils/error.mjs';
 // Constants
 export const AUDIO_BIT_RATE = 16000;
 export const RECORDER_TIME_SLICE = 100;
-export const MAX_RECORDING_DURATION = 10000;
+export const MAX_RECORDING_DURATION = 30000;
 
 // Web Worker for audio processing
 const audioWorker = new Worker(new URL("./audio-worker.mjs", import.meta.url), {

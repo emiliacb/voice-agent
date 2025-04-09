@@ -16,7 +16,7 @@ export const WORDINGS = {
     },
     es: {
         title: "Agente de voz",
-        hold: "Sostener para hablar",
+        hold: "Mantené presionado para hablar",
         recording: "Grabando...",
         sending: "Pensando...",
         play: "Reproducir respuesta",
@@ -50,6 +50,7 @@ export function setUpLanguageSelector() {
     document.documentElement.setAttribute("lang", currentLanguage);
     appState.state.currentLanguage = currentLanguage;
     pttButton.textContent = i18n.hold;
+    pttButton.classList.add(`lang_${currentLanguage}`);
     errorMessage.textContent = i18n.errorMessage;
     playButton.textContent = i18n.play;
     

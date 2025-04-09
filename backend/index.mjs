@@ -17,11 +17,11 @@ const app = new Hono();
 
 const ipLimiter = new RateLimiterMemory({
   points: 10,
-  duration: 5 * 60 * 60, // 5 hours
+  duration: 3 * 60 * 60, // 3 hours
 });
 
 const routeLimiter = new RateLimiterMemory({
-  points: 80,
+  points: 100,
   duration: 1 * 60 * 60, // 1 hour
 });
 

@@ -16,8 +16,8 @@ config();
 const app = new Hono();
 
 const ipLimiter = new RateLimiterMemory({
-  points: 5,
-  duration: 60,
+  points: 10,
+  duration: 60 * 60,
 });
 
 const routeLimiter = new RateLimiterMemory({

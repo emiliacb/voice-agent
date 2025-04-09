@@ -36,12 +36,14 @@ class AppState {
                             case "isRecording":
                                 pttButton.classList.toggle("recording", value);
                                 pttButton.textContent = value ? i18n.recording : i18n.hold;
+                                pttButton.classList.toggle("idle", !value);
                                 pttButton.disabled = false;
                                 break;
 
                             case "isLoading":
                                 if (value) {
                                     pttButton.classList.remove("recording");
+                                    pttButton.classList.remove("idle");
                                     pttButton.textContent = i18n.sending;
                                     pttButton.disabled = value;
                                 }

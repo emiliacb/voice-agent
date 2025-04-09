@@ -381,12 +381,12 @@ body {
     overflow: hidden;
 }
 
-#pttButton {
+#pttButton.idle.lang_en {
     font-size: 3rem;
     padding-top: 1.6rem;
 }
 
-#pttButton.lang_es {
+#pttButton.idle.lang_es {
     font-size: 2rem;
     line-height: 1.4rem;
     padding-top: 1.5rem;

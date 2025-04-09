@@ -51,6 +51,7 @@ export function setUpLanguageSelector() {
     appState.state.currentLanguage = currentLanguage;
     pttButton.textContent = i18n.hold;
     pttButton.classList.add(`lang_${currentLanguage}`);
+    pttButton.classList.add("idle");
     errorMessage.textContent = i18n.errorMessage;
     playButton.textContent = i18n.play;
     

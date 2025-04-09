@@ -106,6 +106,7 @@ export async function sendAudioToServer() {
                         showError(appState.domElements.i18n.rateLimit);
                         appState.state.isRecording = false;
                         appState.domElements.pttButton.disabled = true;
+                        appState.domElements.pttButton.classList.remove("recording");
                         return;
                     }
 

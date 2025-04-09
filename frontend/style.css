@@ -339,7 +339,7 @@ body {
     opacity: 0.5;
     mix-blend-mode: darken;
     filter: contrast(1.5) saturate(0);
-    animation: scanlines 10s linear infinite;
+    /* animation: scanlines 10s linear infinite; */
     z-index: 200;
     user-select: none;
     border-radius: 1rem;
@@ -356,7 +356,7 @@ body {
     left: -25%;
     top: -25%;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
-    animation: scanline 1.5s linear infinite;
+    /* animation: scanline 1.5s linear infinite; */
     background-size: 100% 80px;
     background-repeat: no-repeat;
     rotate: -3deg;

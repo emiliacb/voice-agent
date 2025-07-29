@@ -31,11 +31,14 @@ function initialize() {
     setupPushToTalk();
     setupAnimationListeners();
 
+    // TODO - Remove this after fixing OpenAI payment.
+    showError("We're currently experiencing issues with OpenAI. Please try again later.");
+
     // Show disclaimer if not Chrome
-    const isChrome = navigator.userAgent.includes("Chrome");
-    if (!isChrome) {
-        showError(appState.domElements.i18n.disclaimer);
-    }
+    // const isChrome = navigator.userAgent.includes("Chrome");
+    // if (!isChrome) {
+    //     showError(appState.domElements.i18n.disclaimer);
+    // }
 }
 
 async function main() {

@@ -1,8 +1,8 @@
 import appState from "../features/state.mjs";
 
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
-const HEALTHCHECK_TIMEOUT = 5000;
-const HEALTHCHECK_INTERVAL = 2000;
+const HEALTHCHECK_TIMEOUT = 10000;
+const HEALTHCHECK_INTERVAL = 10000;
 const DIALOG_SELECTOR = "waking-up-dialog";
 
 function showDialog() {

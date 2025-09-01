@@ -21,15 +21,11 @@ RUN curl -L -o rhubarb.zip https://github.com/DanielSWolf/rhubarb-lip-sync/relea
 
 WORKDIR /app
 
-# Copy package files first for better layer caching
-# This layer will be cached unless package.json or package-lock.json changes
+# Install dependencies
 COPY package*.json ./
+RUN npm i --only=production && npm cache clean --force
 
-# Install dependencies - this layer will be cached unless package files change
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy application code last - this layer changes most frequently
-# Only this layer will be rebuilt when code changes
+# Copy final app files
 COPY . .
 
 # Expose the port your app runs on

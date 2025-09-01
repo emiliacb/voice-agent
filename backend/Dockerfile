@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-# Install dependencies for Rhubarb
+# Install system dependencies for Rhubarb and other tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libc6 \
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and setup Rhubarb
+# Download and setup Rhubarb - separate layer for better caching
 RUN curl -L -o rhubarb.zip https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.13.0/Rhubarb-Lip-Sync-1.13.0-Linux.zip && \
     unzip rhubarb.zip && \
     mv Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb /usr/local/bin/ && \
@@ -21,12 +21,16 @@ RUN curl -L -o rhubarb.zip https://github.com/DanielSWolf/rhubarb-lip-sync/relea
 
 WORKDIR /app
 
-# Install Node.js dependencies
-COPY ./package*.json ./
-RUN npm install
+# Copy package files first for better layer caching
+# This layer will be cached unless package.json or package-lock.json changes
+COPY package*.json ./
 
-# Copy application code
-COPY ./ ./
+# Install dependencies - this layer will be cached unless package files change
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy application code last - this layer changes most frequently
+# Only this layer will be rebuilt when code changes
+COPY . .
 
 # Expose the port your app runs on
 EXPOSE 8080

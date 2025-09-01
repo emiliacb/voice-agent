@@ -76,13 +76,29 @@ app.post("/message", async (c) => {
     const transcriptionResult = await transcribeAudioReplicate(wavFile);
 
     // Generate LLM response
-    const llmResult = await generateLLMResponse(
-      transcriptionResult.transcription,
-      transcriptionResult.detected_language,
-    );
+    let llmResult;
+    try {
+      llmResult = await generateLLMResponse(
+        transcriptionResult.transcription,
+        transcriptionResult.detected_language,
+      );
+    } catch(err) {
+      Log.error(err)
+      llmResult = await generateLLMResponse(
+        transcriptionResult.transcription,
+        transcriptionResult.detected_language,
+        true
+      );
+    }
 
     // Generate audio from LLM response
-    const responseAudioBuffer = await generateAudioFromTextGemini(llmResult);
+    let responseAudioBuffer
+    try {
+      responseAudioBuffer = await generateAudioFromTextGemini(llmResult);
+    } catch(err) {
+      Log.error(err)
+      responseAudioBuffer = await generateAudioFromTextGemini(llmResult, true);
+    }
 
     // Process response audio with Rhubarb
     const rhubarbResult = await processAudioWithRhubarb(responseAudioBuffer);

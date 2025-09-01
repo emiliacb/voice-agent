@@ -42,7 +42,7 @@ export async function generateAudioFromTextOpenAI(text) {
   }
 }
 
-export async function generateAudioFromTextGemini(text) {
+export async function generateAudioFromTextGemini(text, fallback = false) {
   if (!text) {
     throw new Error('No text provided');
   }
@@ -51,7 +51,7 @@ export async function generateAudioFromTextGemini(text) {
 
   try {
     const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: fallback ? process.env.GEMINI_API_KEY_FALLBACK : process.env.GEMINI_API_KEY,
     });
 
     const config = {

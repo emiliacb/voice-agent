@@ -21,12 +21,12 @@ USER LANGUAGE: ${language}
 
 CONSTRAINTS
 Be EXTREMELY brief and direct
-Maximum 100 words per response
+Maximum 50 words per response
 Answer in a way that is easy to convert to audio
 Answer ALWAYS in the same language as the user's message
 `;
 
-export async function generateLLMResponse(userMessage, detectedLanguage) {
+export async function generateLLMResponse(userMessage, detectedLanguage, fallback = false) {
   if (!userMessage) {
     throw new Error("No message provided");
   }
@@ -35,7 +35,7 @@ export async function generateLLMResponse(userMessage, detectedLanguage) {
 
   try {
     const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: fallback ? process.env.GEMINI_API_KEY_FALLBACK : process.env.GEMINI_API_KEY,
     });
 
     const config = {
@@ -43,7 +43,7 @@ export async function generateLLMResponse(userMessage, detectedLanguage) {
         thinkingBudget: 0,
       },
     };
-    const model = "gemini-2.5-flash";
+    const model = "gemini-2.5-flash-lite";
     const contents = [
       {
         role: "user",

@@ -26,7 +26,7 @@ export async function transcribeAudioReplicate(audioFile) {
       },
     });
 
-    Log.info("Transcription completed successfully");
+    Log.info(`Transcription completed successfully: ${output?.transcription}`);
     return { transcription: output.transcription };
   } catch (error) {
     Log.error(`Whisper transcription failed: ${error}`);

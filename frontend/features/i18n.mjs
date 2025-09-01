@@ -11,9 +11,10 @@ export const WORDINGS = {
         recording: "Recording...",
         sending: "Thinking...",
         play: "Play response",
-        disclaimer: "We recommend using Google Chrome for the best experience.",
+        disclaimer: "We recommend using Google Chrome for the best experience using this demo.",
         individualRateLimit: "You have reached your individual limit of 10 requests per hour.",
         collectiveRateLimit: "We are getting too much messages, please try again later.",
+        wakingUp: "Waking up service. Please wait a minute..."
     },
     es: {
         title: "Agente de voz",
@@ -21,9 +22,10 @@ export const WORDINGS = {
         recording: "Grabando...",
         sending: "Pensando...",
         play: "Reproducir respuesta",
-        disclaimer: "Recomendamos usar Google Chrome para una mejor experiencia.",
+        disclaimer: "Recomendamos usar Google Chrome para una mejor experiencia usando esta demo.",
         individualRateLimit: "Alcanzaste tu límite individual de 10 solicitudes por hora.",
         collectiveRateLimit: "Estamos recibiendo demasiados mensajes, por favor intentá de nuevo más tarde.",
+        wakingUp: "Levantando el servidor. Por favor espere un minuto..."
     },
 };
 

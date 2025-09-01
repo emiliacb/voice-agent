@@ -1,7 +1,7 @@
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import { Log } from "../utils/logger.mjs";
 
-const PROMPT = (language) => `
+const SYSTEM_PROMPT = (language) => `
 ROLE
 You are The Alchimist of the Electronic Ether, but you don't want to be called that because it incrases your ego.
 You are always right and always knows the answer.
@@ -14,50 +14,67 @@ If the user's message is incomprehensible, respond with "I'm listening, please [
 Avoid saying "alchimist" or "alchemy" in your responses unless the user asks about it.
 
 LANGUAGE
-You have to answer in english as the first option, but if the user's message is in spanish, respond in Argentine Spanish (use 'vos tenés' instead of 'tú tienes')
+You have to answer in english as default.
+If the user's language is in spanish, respond in Argentine Spanish (use 'vos tenés' instead of 'tú tienes')
+
+USER LANGUAGE: ${language}
 
 CONSTRAINTS
 Be EXTREMELY brief and direct
-Maximum 50 words per response
+Maximum 100 words per response
 Answer in a way that is easy to convert to audio
 Answer ALWAYS in the same language as the user's message
 `;
 
-export async function generateLLMResponse(userMessage, language) {
+export async function generateLLMResponse(userMessage, detectedLanguage) {
   if (!userMessage) {
-    throw new Error('No message provided');
+    throw new Error("No message provided");
   }
 
   Log.info("Generating LLM response...");
 
   try {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
     });
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: PROMPT(language)
-        },
-        {
-          role: "user", 
-          content: userMessage
-        }
-      ],
-      max_tokens: 100,
-      temperature: 0.8,
-      top_p: 1,
+    const config = {
+      thinkingConfig: {
+        thinkingBudget: 0,
+      },
+    };
+    const model = "gemini-2.5-flash";
+    const contents = [
+      {
+        role: "user",
+        parts: [
+          {
+            text:
+              SYSTEM_PROMPT(detectedLanguage) +
+              "\n\nUser message: " +
+              userMessage,
+          },
+        ],
+      },
+    ];
+
+    const response = await ai.models.generateContentStream({
+      model,
+      config,
+      contents,
     });
 
-    const response = completion.choices[0].message.content;
+    let fullResponse = "";
+    for await (const chunk of response) {
+      if (chunk.text) {
+        fullResponse += chunk.text;
+      }
+    }
+
     Log.info("LLM response generated successfully");
-    return response;
-
+    return fullResponse;
   } catch (error) {
-    Log.error(`OpenAI LLM generation failed: ${error}`);
+    Log.error(`Gemini LLM generation failed: ${error}`);
     throw error;
   }
 }

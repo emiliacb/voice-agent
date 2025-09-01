@@ -1,7 +1,5 @@
-import { promises as fs } from "fs";
-import { spawn } from 'child_process';
-
 import OpenAI from "openai";
+import Replicate from "replicate";
 
 import { Log } from "../utils/logger.mjs";
 
@@ -22,9 +20,9 @@ export async function transcribeAudioReplicate(audioFile) {
     const output = await replicate.run(WHISPER_MODEL, {
       input: {
         audio: `data:audio/wav;base64,${base64Audio}`,
-        model: "large-v2",
         transcription: "plain text",
-        language: "en",
+        language: "auto",
+        translate: false,
       },
     });
 

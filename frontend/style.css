@@ -20,13 +20,14 @@
 
 @layer variables {
     :root {
-        --primary-color: #2f60e7; /* old: #2f60e7; new: #482d8b */
+        --primary-color: #2f60e7;
+        /* old: #2f60e7; new: #482d8b */
         --secondary-color: #9d671b;
         --primary-color-bg: var(--primary-color);
         --secondary-color-bg: var(--secondary-color);
         --primary-color-text: #fff;
         --secondary-color-text: #fff;
-        
+
         --lips-color: tomato;
         --tongue-color: #c553a7;
         --mouth-transition-duration: 50ms;
@@ -128,6 +129,20 @@
 
         100% {
             filter: brightness(1) saturate(1);
+        }
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(1.2vh) rotate(-1deg);
+        }
+
+        100% {
+            transform: translateY(0);
         }
     }
 }
@@ -333,6 +348,7 @@ body {
     margin-bottom: -5rem;
     overflow: hidden;
     -webkit-mask-image: -webkit-radial-gradient(circle, white 100%, black 100%);
+    animation: float 6s ease-in-out infinite;
 }
 
 /* Scanlines effect */
@@ -352,7 +368,7 @@ body {
     opacity: 0.3;
     mix-blend-mode: soft-light;
     filter: contrast(1.5) saturate(0);
-    animation: scanlines 10s linear infinite; 
+    animation: scanlines 10s linear infinite;
     z-index: 200;
     user-select: none;
     border-radius: 1rem;
@@ -418,6 +434,7 @@ body {
     border-radius: 3rem;
     background-color: #533;
     transition: height var(--mouth-transition-duration) ease-in-out;
+    animation: float 4s ease-in-out infinite;
 
     .upper_lips {
         position: absolute;

@@ -64,7 +64,6 @@ app.post("/message", async (c) => {
     
     const formData = await c.req.formData();
     const audioFile = formData.get("audio");
-    const lang = c.req.query("lang");
 
     if (!audioFile) {
       return c.json({ error: "No audio file provided" }, 400);
@@ -72,16 +71,14 @@ app.post("/message", async (c) => {
 
     // Transcribe audio
     const transcriptionResult = await transcribeAudioReplicate(audioFile);
-    const detectedLanguage = lang || "en";
 
     // Generate LLM response
     let llmResult = await generateLLMResponseWithRetry(
       transcriptionResult.transcription,
-      detectedLanguage
     );
 
     // Generate audio from LLM response
-    let responseAudioBuffer = await generateAudioFromTextReplicate(llmResult, detectedLanguage);
+    let responseAudioBuffer = await generateAudioFromTextReplicate(llmResult);
 
     // Process response audio with Rhubarb
     const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);

@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Log } from "../utils/logger.mjs";
 
-const SYSTEM_PROMPT = (language) => `
+const SYSTEM_PROMPT = () => `
 ROLE
 You are The Alchimist of the Electronic Ether, but you don't want to be called that because it incrases your ego.
 You are always right and always knows the answer.
@@ -17,8 +17,6 @@ LANGUAGE
 You have to answer in english as default.
 If the user's language is in spanish, respond in Argentine Spanish (use 'vos tenés' instead of 'tú tienes')
 
-USER LANGUAGE: ${language}
-
 CONSTRAINTS
 Be EXTREMELY brief and direct
 Maximum 50 words per response
@@ -33,7 +31,6 @@ const GEMINI_API_KEYS = [
 
 export async function generateLLMResponse(
   userMessage,
-  detectedLanguage,
   apiKey = GEMINI_API_KEYS[0]
 ) {
   if (!userMessage) {
@@ -59,7 +56,7 @@ export async function generateLLMResponse(
         parts: [
           {
             text:
-              SYSTEM_PROMPT(detectedLanguage) +
+              SYSTEM_PROMPT() +
               "\n\nUser message: " +
               userMessage,
           },
@@ -90,7 +87,6 @@ export async function generateLLMResponse(
 
 export async function generateLLMResponseWithRetry(
   userMessage = "Contame un chiste de maradona",
-  detectedLanguage
 ) {
   let lastError;
   for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
@@ -98,7 +94,6 @@ export async function generateLLMResponseWithRetry(
       Log.info(`Trying LLM response with Gemini API key #${i + 1}`);
       const response = await generateLLMResponse(
         userMessage,
-        detectedLanguage,
         GEMINI_API_KEYS[i]
       );
       if (response) {

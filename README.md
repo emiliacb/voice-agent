@@ -21,6 +21,21 @@ voice-agent/
 └── .gitignore
 ```
 
+## Architecture
+
+The application consists of three main components:
+
+### Frontend (`/frontend`)
+- **Vite-based** vanilla web application
+- **Pure CSS animations** for lip-sync visualization
+- **Real-time audio processing** with Web Audio API
+
+### Backend (`/backend`)
+- **Hono.js** lightweight web framework
+- **Docker** for easy deployment
+- **Rate limiting** with IP and route-based protection
+- **CORS configuration** for secure cross-origin requests
+
 ## Local Development
 
 ### Requirements

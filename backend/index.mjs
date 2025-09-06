@@ -51,9 +51,9 @@ app.use("*", async (c, next) => {
 
 app.get("/health", async (c) => {
   // Wake up Rhubarb model in background without blocking the response
-  wakeUpRhubarbModel().catch(() => {
-    // This is just a wake up call
-  });
+  wakeUpRhubarbModel().then(() => {
+    Log.info("Rhubarb model woken up successfully");
+  }).catch(() => {});
   
   return c.text("OK");
 });

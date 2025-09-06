@@ -39,7 +39,7 @@ export async function initializeAudioCapture() {
 
         audioStream.getTracks().forEach((track) => (track.enabled = false));
     } catch (error) {
-        showErrorToast(appState.i18n.genericError);
+        showErrorToast(appState.domElements.i18n.genericError);
         console.error("Error initializing audio capture:", error);
     }
 }
@@ -67,7 +67,7 @@ export async function startRecording() {
         appState.state.isRecording = true;
         appState.state.timeoutId = setTimeout(stopRecording, MAX_RECORDING_DURATION);
     } catch (error) {
-        showErrorToast(appState.i18n.genericError);
+        showErrorToast(appState.domElements.i18n.genericError);
         console.error("Recording failed:", error);
         appState.state.isRecording = false;
     }
@@ -92,11 +92,66 @@ export async function stopRecording() {
     });
 }
 
+async function getAudioDuration(audioBlob) {
+    return new Promise((resolve, reject) => {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const fileReader = new FileReader();
+        
+        fileReader.onload = function() {
+            audioContext.decodeAudioData(fileReader.result)
+                .then(audioBuffer => {
+                    const duration = audioBuffer.duration;
+                    audioContext.close();
+                    resolve(duration);
+                })
+                .catch(error => {
+                    audioContext.close();
+                    reject(error);
+                });
+        };
+        
+        fileReader.onerror = function() {
+            audioContext.close();
+            reject(new Error('Failed to read audio file'));
+        };
+        
+        fileReader.readAsArrayBuffer(audioBlob);
+    });
+}
+
 export async function sendAudioToServer() {
     try {
         appState.state.isLoading = true;
         const { audio } = appState.domElements;
         const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+
+        // Check if audioChunks is empty
+        if (!appState.state.audioChunks || appState.state.audioChunks.length === 0) {
+            showErrorToast(appState.domElements.i18n.genericError);
+            appState.state.isLoading = false;
+            return;
+        }
+
+        // Create audio blob for duration check
+        const audioBlob = new Blob(appState.state.audioChunks, {
+            type: getRecordType(),
+        });
+
+        // Check audio duration before sending to worker
+        try {
+            const duration = await getAudioDuration(audioBlob);
+            if (duration < 1.0) {
+                showErrorToast(appState.domElements.i18n.audioTooShort);
+                appState.state.isLoading = false;
+                appState.state.isRecording = false;
+                appState.domElements.pttButton.disabled = true;
+                appState.domElements.pttButton.classList.remove("recording");
+                return;
+            }
+        } catch (durationError) {
+            console.warn('Could not determine audio duration:', durationError);
+            // Continue processing if duration check fails
+        }
 
         // Create a promise that will resolve when the worker sends back the result
         const workerResponse = new Promise((resolve, reject) => {
@@ -147,7 +202,7 @@ export async function sendAudioToServer() {
 
         appState.state.isLoading = false;
     } catch (error) {
-        showErrorToast(appState.i18n.genericError);
+        showErrorToast(appState.domElements.i18n.genericError);
         appState.state.isLoading = false;
         console.error("Error processing audio:", error);
     }
@@ -192,4 +247,4 @@ export function setupPushToTalk() {
             stopRecording();
         }
     });
-} 
+}

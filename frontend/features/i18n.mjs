@@ -15,6 +15,7 @@ export const WORDINGS = {
         individualRateLimit: "You have reached your individual limit of 10 requests per hour.",
         collectiveRateLimit: "We are getting too much messages, please try again later.",
         wakingUp: "Waking up service. Please wait a minute...",
+        audioTooShort: "Audio recording is too short. Please record for at least 1 second.",
         genericError: "An unexpected error occurred. Please try again."
     },
     es: {
@@ -27,6 +28,7 @@ export const WORDINGS = {
         individualRateLimit: "Alcanzaste tu límite individual de 10 solicitudes por hora.",
         collectiveRateLimit: "Estamos recibiendo demasiados mensajes, por favor intentá de nuevo más tarde.",
         wakingUp: "Levantando el servidor. Por favor espere un minuto...",
+        audioTooShort: "La grabación de audio es muy corta. Por favor graba por al menos 1 segundo.",
         genericError: "Ocurrió un error inesperado. Por favor, intentá de nuevo."
     },
 };
@@ -71,4 +73,4 @@ export function setUpLanguageSelector() {
     appState.setDomElements({ i18n });
     
     return i18n;
-} 
+}

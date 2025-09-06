@@ -17,7 +17,7 @@ async function sendAudioToServer({audioChunks, backendUrl, currentLanguage}) {
         if (!audioChunks || audioChunks.length === 0) {
             self.postMessage({
                 type: 'ERROR',
-                error: 'No audio data received'
+                error: { message: 'No audio data received' }
             });
             return;
         }
@@ -62,4 +62,4 @@ async function sendAudioToServer({audioChunks, backendUrl, currentLanguage}) {
             error: error
         });
     }
-} 
+}

@@ -710,3 +710,33 @@ This extended mouth shape is optional. Whether there should be any visible diffe
         transform: rotate(7deg);
     }
 }
+/* Toast Container Styles */
+#toastContainer {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    pointer-events: none;
+}
+
+#toastContainer .toast {
+    pointer-events: auto;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    #toastContainer {
+        top: 0.5rem;
+        right: 0.5rem;
+        left: 0.5rem;
+        align-items: stretch;
+    }
+    
+    #toastContainer .toast {
+        max-width: none;
+        margin-bottom: 0.25rem;
+    }
+}

@@ -1,3 +1,5 @@
+import { showErrorToast } from "./error.mjs";
+
 // Safari does not support the .play method on the audio element
 export function isSafari() {
     return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -34,6 +36,7 @@ export function playIfSupported(audioElement) {
         audioElement.play();
         return { ok: true };
     } catch (error) {
+        showErrorToast("Audio playback not supported in this browser.");
         return { ok: false, error };
     }
 }

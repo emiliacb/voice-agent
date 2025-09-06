@@ -9,6 +9,7 @@ export function getDomElements() {
         langSelector: document.getElementById("langSelector"),
         mouthElement: document.querySelector(".mouth"),
         errorMessage: document.getElementById("errorMessage"),
+        toastContainer: document.getElementById("toastContainer"),
         closeErrorMessage: document.getElementById("closeErrorMessage"),
     };
 

@@ -2,7 +2,7 @@ import appState from './state.mjs';
 import { animateShapes, stopAnimation } from './animation.mjs';
 import { getRecordType } from '../utils/get-record-type.mjs';
 import { playIfSupported } from '../utils/get-play-permissions.mjs';
-import { showError } from '../utils/error.mjs';
+import { showErrorToast } from '../utils/error.mjs';
 
 // Constants
 export const AUDIO_BIT_RATE = 16000;
@@ -21,6 +21,7 @@ let mediaRecorder = null;
 export async function initializeAudioCapture() {
     try {
         if (typeof MediaRecorder === "undefined") {
+            showErrorToast("MediaRecorder is not supported in this browser. Please use a modern browser.");
             throw new Error("MediaRecorder is not supported in this browser");
         }
 
@@ -38,6 +39,7 @@ export async function initializeAudioCapture() {
 
         audioStream.getTracks().forEach((track) => (track.enabled = false));
     } catch (error) {
+        showErrorToast(appState.i18n.genericError);
         console.error("Error initializing audio capture:", error);
     }
 }
@@ -65,6 +67,7 @@ export async function startRecording() {
         appState.state.isRecording = true;
         appState.state.timeoutId = setTimeout(stopRecording, MAX_RECORDING_DURATION);
     } catch (error) {
+        showErrorToast(appState.i18n.genericError);
         console.error("Recording failed:", error);
         appState.state.isRecording = false;
     }
@@ -106,11 +109,11 @@ export async function sendAudioToServer() {
                     case "ERROR":
                         console.log("Error:", JSON.stringify(error, null, 2));
                         if (error.message === "Individual rate limit exceeded") {
-                            showError(appState.domElements.i18n.individualRateLimit);
+                            showErrorToast(appState.domElements.i18n.individualRateLimit);
                         }
 
                         if (error.message === "Collective rate limit exceeded") {
-                            showError(appState.domElements.i18n.collectiveRateLimit);
+                            showErrorToast(appState.domElements.i18n.collectiveRateLimit);
                         }
 
                         appState.state.isRecording = false;
@@ -144,6 +147,7 @@ export async function sendAudioToServer() {
 
         appState.state.isLoading = false;
     } catch (error) {
+        showErrorToast(appState.i18n.genericError);
         appState.state.isLoading = false;
         console.error("Error processing audio:", error);
     }

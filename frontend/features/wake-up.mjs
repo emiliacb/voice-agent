@@ -1,4 +1,5 @@
 import appState from "../features/state.mjs";
+import { showErrorToast } from "../utils/error.mjs";
 
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 const HEALTHCHECK_TIMEOUT = 1000 * 60 * 5; // 5 minutes
@@ -53,6 +54,7 @@ export async function wakeUpBackend() {
           }
         })
         .catch(() => {
+          showErrorToast("Failed to connect to server. Please check your connection.");
           clearTimeout(timeoutId);
         });
     }

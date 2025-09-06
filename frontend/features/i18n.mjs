@@ -14,7 +14,8 @@ export const WORDINGS = {
         disclaimer: "We recommend using Google Chrome for the best experience using this demo.",
         individualRateLimit: "You have reached your individual limit of 10 requests per hour.",
         collectiveRateLimit: "We are getting too much messages, please try again later.",
-        wakingUp: "Waking up service. Please wait a minute..."
+        wakingUp: "Waking up service. Please wait a minute...",
+        genericError: "An unexpected error occurred. Please try again."
     },
     es: {
         title: "Agente de voz",
@@ -25,7 +26,8 @@ export const WORDINGS = {
         disclaimer: "Recomendamos usar Google Chrome para una mejor experiencia usando esta demo.",
         individualRateLimit: "Alcanzaste tu límite individual de 10 solicitudes por hora.",
         collectiveRateLimit: "Estamos recibiendo demasiados mensajes, por favor intentá de nuevo más tarde.",
-        wakingUp: "Levantando el servidor. Por favor espere un minuto..."
+        wakingUp: "Levantando el servidor. Por favor espere un minuto...",
+        genericError: "Ocurrió un error inesperado. Por favor, intentá de nuevo."
     },
 };
 

@@ -33,8 +33,6 @@ export async function generateAudioFromTextReplicate(text, detectedLanguage) {
       throw new Error("No audio URL received from Replicate");
     }
 
-    console.log({audioUrl})
-
     // Download the audio and return it as a Buffer
     const res = await fetch(audioUrl);
     if (!res.ok) {

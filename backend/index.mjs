@@ -105,4 +105,4 @@ const port = process.env.PORT || 3000;
 serve({
   fetch: app.fetch,
   port,
-}, () => console.log(`Listening at ${port}`));
+}, () => Log.info(`Listening at ${port}`));

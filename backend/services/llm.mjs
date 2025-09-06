@@ -26,7 +26,16 @@ Answer in a way that is easy to convert to audio
 Answer ALWAYS in the same language as the user's message
 `;
 
-export async function generateLLMResponse(userMessage, detectedLanguage, fallback = false) {
+const GEMINI_API_KEYS = [
+  process.env.GEMINI_API_KEY,
+  process.env.GEMINI_API_KEY_FALLBACK,
+];
+
+export async function generateLLMResponse(
+  userMessage,
+  detectedLanguage,
+  apiKey = GEMINI_API_KEYS[0]
+) {
   if (!userMessage) {
     throw new Error("No message provided");
   }
@@ -35,7 +44,7 @@ export async function generateLLMResponse(userMessage, detectedLanguage, fallbac
 
   try {
     const ai = new GoogleGenAI({
-      apiKey: fallback ? process.env.GEMINI_API_KEY_FALLBACK : process.env.GEMINI_API_KEY,
+      apiKey,
     });
 
     const config = {
@@ -77,4 +86,33 @@ export async function generateLLMResponse(userMessage, detectedLanguage, fallbac
     Log.error(`Gemini LLM generation failed: ${error}`);
     throw error;
   }
+}
+
+export async function generateLLMResponseWithRetry(
+  userMessage = "Contame un chiste de maradona",
+  detectedLanguage
+) {
+  let lastError;
+  for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
+    try {
+      Log.info(`Trying LLM response with Gemini API key #${i + 1}`);
+      const response = await generateLLMResponse(
+        userMessage,
+        detectedLanguage,
+        GEMINI_API_KEYS[i]
+      );
+      if (response) {
+        Log.info(`LLM response succeeded with Gemini API key #${i + 1}. ${JSON.stringify(response)}`);
+        return response;
+      }
+    } catch (err) {
+      Log.error(
+        `LLM response failed with Gemini API key #${i + 1}: ${err.message}`
+      );
+      lastError = err;
+    }
+  }
+  Log.error("All Gemini API keys failed for LLM response.");
+  console.error(lastError);
+  throw new Error("Retry Failed: Used all valid Gemini API keys available");
 }

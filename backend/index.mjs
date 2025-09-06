@@ -5,11 +5,10 @@ import { cors } from "hono/cors";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 import { Log } from "./utils/logger.mjs";
-import { convertToWav } from "./utils/audio.mjs";
 import { processAudioWithRhubarb } from "./services/rhubarb.mjs";
 import { transcribeAudioReplicate } from "./services/speech-to-text.mjs";
-import { generateLLMResponse } from "./services/llm.mjs";
-import { generateAudioFromTextGemini } from "./services/text-to-speech.mjs";
+import { generateLLMResponseWithRetry } from "./services/llm.mjs";
+import { generateAudioFromTextReplicate } from "./services/text-to-speech.mjs";
 
 config();
 
@@ -60,45 +59,27 @@ app.post("/message", async (c) => {
     await ipLimiter.consume(c.req.ip);
     await routeLimiter.consume(c.req.url);
 
+    
     const formData = await c.req.formData();
     const audioFile = formData.get("audio");
+    const lang = c.req.query("lang");
 
     if (!audioFile) {
       return c.json({ error: "No audio file provided" }, 400);
     }
 
-    // Convert input audio to WAV
-    const inputBuffer = Buffer.from(await audioFile.arrayBuffer());
-    const wavBuffer = await convertToWav(inputBuffer);
-    const wavFile = new File([wavBuffer], "audio.wav", { type: "audio/wav" });
-
     // Transcribe audio
-    const transcriptionResult = await transcribeAudioReplicate(wavFile);
+    const transcriptionResult = await transcribeAudioReplicate(audioFile);
+    const detectedLanguage = lang || "en";
 
     // Generate LLM response
-    let llmResult;
-    try {
-      llmResult = await generateLLMResponse(
-        transcriptionResult.transcription,
-        transcriptionResult.detected_language,
-      );
-    } catch(err) {
-      Log.error(err)
-      llmResult = await generateLLMResponse(
-        transcriptionResult.transcription,
-        transcriptionResult.detected_language,
-        true
-      );
-    }
+    let llmResult = await generateLLMResponseWithRetry(
+      transcriptionResult.transcription,
+      detectedLanguage
+    );
 
     // Generate audio from LLM response
-    let responseAudioBuffer
-    try {
-      responseAudioBuffer = await generateAudioFromTextGemini(llmResult);
-    } catch(err) {
-      Log.error(err)
-      responseAudioBuffer = await generateAudioFromTextGemini(llmResult, true);
-    }
+    let responseAudioBuffer = await generateAudioFromTextReplicate(llmResult, detectedLanguage);
 
     // Process response audio with Rhubarb
     const rhubarbResult = await processAudioWithRhubarb(responseAudioBuffer);
@@ -124,4 +105,4 @@ const port = process.env.PORT || 3000;
 serve({
   fetch: app.fetch,
   port,
-});
+}, () => console.log(`Listening at ${port}`));

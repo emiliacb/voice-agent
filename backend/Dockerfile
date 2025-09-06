@@ -25,6 +25,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm i --only=production && npm cache clean --force
 
+# Copy .env file only if ENV=local
+RUN if [ "$ENV" = "local" ] && [ -f .env ]; then \
+        echo "Copying .env file for local environment"; \
+        cp .env .env.backup; \
+    else \
+        echo "Skipping .env file copy (ENV=$ENV)"; \
+    fi
+
 # Copy final app files
 COPY . .
 

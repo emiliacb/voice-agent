@@ -1,8 +1,8 @@
 import appState from "../features/state.mjs";
 
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL;
-const HEALTHCHECK_TIMEOUT = 10000;
-const HEALTHCHECK_INTERVAL = 10000;
+const HEALTHCHECK_TIMEOUT = 1000 * 60 * 5; // 5 minutes
+//const HEALTHCHECK_INTERVAL = 1000 * 1; // 10 minutes
 const DIALOG_SELECTOR = "waking-up-dialog";
 
 function showDialog() {
@@ -42,11 +42,12 @@ export async function wakeUpBackend() {
         HEALTHCHECK_TIMEOUT
       );
 
+      
       fetch(`${BACKEND_BASE_URL}/health`, { signal: controller.signal })
-        .then(async (res) => {
-          clearTimeout(timeoutId);
-          if (res.ok) {
-            clearInterval(intervalId);
+      .then(async (res) => {
+        clearTimeout(timeoutId);
+        if (res.ok) {
+            //clearInterval(intervalId);
             hideDialog();
             resolve();
           }
@@ -57,7 +58,7 @@ export async function wakeUpBackend() {
     }
 
     showDialog();
-    intervalId = setInterval(tryWakeUp, HEALTHCHECK_INTERVAL);
+    //intervalId = setInterval(tryWakeUp, HEALTHCHECK_INTERVAL);
     tryWakeUp();
   });
 }

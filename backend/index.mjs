@@ -5,7 +5,7 @@ import { cors } from "hono/cors";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 import { Log } from "./utils/logger.mjs";
-import { processAudioWithRhubarb } from "./services/rhubarb.mjs";
+import { createVisemesWithRhubarb, wakeUpRhubarbModel } from "./services/rhubarb.mjs";
 import { transcribeAudioReplicate } from "./services/speech-to-text.mjs";
 import { generateLLMResponseWithRetry } from "./services/llm.mjs";
 import { generateAudioFromTextReplicate } from "./services/text-to-speech.mjs";
@@ -50,6 +50,11 @@ app.use("*", async (c, next) => {
 });
 
 app.get("/health", async (c) => {
+  // Wake up Rhubarb model in background without blocking the response
+  wakeUpRhubarbModel().catch(() => {
+    // This is just a wake up call
+  });
+  
   return c.text("OK");
 });
 
@@ -82,7 +87,7 @@ app.post("/message", async (c) => {
     let responseAudioBuffer = await generateAudioFromTextReplicate(llmResult, detectedLanguage);
 
     // Process response audio with Rhubarb
-    const rhubarbResult = await processAudioWithRhubarb(responseAudioBuffer);
+    const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
 
     return c.json({
       audio: responseAudioBuffer.toString("base64"),

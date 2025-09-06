@@ -11,14 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and setup Rhubarb - separate layer for better caching
-RUN curl -L -o rhubarb.zip https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.13.0/Rhubarb-Lip-Sync-1.13.0-Linux.zip && \
-    unzip rhubarb.zip && \
-    mv Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb /usr/local/bin/ && \
-    mv Rhubarb-Lip-Sync-1.13.0-Linux/res /usr/local/bin/ && \
-    chmod +x /usr/local/bin/rhubarb && \
-    rm -rf Rhubarb-Lip-Sync-1.13.0-Linux* rhubarb.zip
-
 WORKDIR /app
 
 # Install dependencies

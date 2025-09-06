@@ -1,155 +1,123 @@
 import { promises as fs } from "node:fs";
-import { spawn } from "node:child_process";
+import Replicate from "replicate";
 
 import { Log } from "../utils/logger.mjs";
-import { convertToWav } from "../utils/audio.mjs";
 
-export async function processAudioWithRhubarb(audioBuffer) {
-  // Generate unique file paths
-  const timestamp = Date.now();
-  const inputPath = `/tmp/input-${timestamp}.wav`;
-  const outputPath = `/tmp/output-${timestamp}.json`;
+const RHUBARB_MODEL = "emiliacb/rhubarb:77c6ca1eba1df53516451a5e879c871dd9bcf31b39f7620e02bffab3caaf3d5b";
 
+// Create a minimal audio buffer for wake up (1 second of silence)
+function createMinimalAudioBuffer() {
+  // Create a very short WAV file (1 second of silence at 44.1kHz, 16-bit, mono)
+  const sampleRate = 44100;
+  const duration = 1; // 1 second
+  const numSamples = sampleRate * duration;
+  
+  // WAV header
+  const header = Buffer.from([
+    // RIFF header
+    0x52, 0x49, 0x46, 0x46, // "RIFF"
+    0x00, 0x00, 0x00, 0x00, // File size (will be calculated)
+    0x57, 0x41, 0x56, 0x45, // "WAVE"
+    
+    // fmt chunk
+    0x66, 0x6D, 0x74, 0x20, // "fmt "
+    0x10, 0x00, 0x00, 0x00, // Chunk size
+    0x01, 0x00,             // Audio format (PCM)
+    0x01, 0x00,             // Number of channels
+    0x44, 0xAC, 0x00, 0x00, // Sample rate (44100)
+    0x88, 0x58, 0x01, 0x00, // Byte rate
+    0x02, 0x00,             // Block align
+    0x10, 0x00,             // Bits per sample
+    
+    // data chunk
+    0x64, 0x61, 0x74, 0x61, // "data"
+    0x00, 0x00, 0x00, 0x00  // Data size (will be calculated)
+  ]);
+  
+  // Create silent audio data
+  const audioData = Buffer.alloc(numSamples * 2); // 16-bit = 2 bytes per sample
+  
+  // Calculate sizes
+  const dataSize = audioData.length;
+  const fileSize = header.length + dataSize - 8;
+  
+  // Update sizes in header
+  header.writeUInt32LE(fileSize, 4);  // File size
+  header.writeUInt32LE(dataSize, 40); // Data size
+  
+  return Buffer.concat([header, audioData]);
+}
+
+export async function wakeUpRhubarbModel() {
   try {
-    Log.info(`Writing audio buffer to file at ${inputPath}...`);
-    Log.info(
-      `Audio buffer type: ${typeof audioBuffer}, length: ${
-        audioBuffer?.length || "unknown"
-      }`
-    );
-
-    // Ensure audioBuffer is valid
-    if (!audioBuffer || !Buffer.isBuffer(audioBuffer)) {
-      throw new Error(`Invalid audio buffer: ${typeof audioBuffer}`);
-    }
-
-    // Convert audioBuffer to WAV format
-    const wavBuffer = await convertToWav(audioBuffer);
-
-    // Split audio into 30-second chunks for better processing
-    const CHUNK_DURATION_MS = 30000; // 30 seconds
-    const SAMPLE_RATE = 44100;
-    const BYTES_PER_SAMPLE = 2; // 16-bit audio
-    const CHANNELS = 1; // Mono
-    const BYTES_PER_MS = (SAMPLE_RATE * BYTES_PER_SAMPLE * CHANNELS) / 1000;
-    const CHUNK_SIZE = Math.floor(CHUNK_DURATION_MS * BYTES_PER_MS);
-
-    // Calculate number of chunks
-    const numChunks = Math.ceil(wavBuffer.length / CHUNK_SIZE);
-    Log.info(
-      `Splitting audio into ${numChunks} chunks of ${CHUNK_DURATION_MS}ms each`
-    );
-
-    let allResults = [];
-    for (let i = 0; i < numChunks; i++) {
-      const start = i * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, wavBuffer.length);
-      const chunk = wavBuffer.slice(start, end);
-
-      // Write the chunk to a temporary file
-      const chunkPath = `${inputPath}-chunk${i}.wav`;
-      await fs.writeFile(chunkPath, chunk);
-      Log.info(
-        `Successfully wrote chunk ${
-          i + 1
-        }/${numChunks} to ${chunkPath}, size: ${
-          (await fs.stat(chunkPath)).size
-        } bytes`
-      );
-
-      // Process chunk with Rhubarb
-      const chunkResult = await runRhubarb(chunkPath, outputPath);
-      allResults.push(chunkResult);
-
-      // Cleanup chunk file
-      await fs.unlink(chunkPath);
-    }
-
-    // Merge results from all chunks
-    const result = {
-      mouthCues: allResults
-        .reduce((acc, curr) => {
-          if (curr && curr.mouthCues) {
-            acc.push(...curr.mouthCues);
-          }
-          return acc;
-        }, [])
-        .sort((a, b) => a.start - b.start),
-    };
-
-    // Cleanup temp files
-    await fs.unlink(outputPath).catch((e) => Log.info(`Cleanup: ${e.message}`));
-
-    return result;
+    Log.info("Waking up Rhubarb model...");
+    
+    const minimalAudio = createMinimalAudioBuffer();
+    const audioBase64 = minimalAudio.toString('base64');
+    
+    const replicate = new Replicate({
+      auth: process.env.REPLICATE_API_TOKEN,
+    });
+    
+    // Make a quick call to wake up the model
+    await replicate.run(RHUBARB_MODEL, {
+      input: {
+        audio_data: audioBase64,
+      },
+    });
+    
+    Log.info("Rhubarb model woken up successfully");
   } catch (error) {
-    Log.error(`Error in processAudioWithRhubarb: ${error.message}`);
-    // Cleanup any remaining temp files
-    try {
-      await fs
-        .unlink(outputPath)
-        .catch((e) => Log.error(`Failed to delete output file: ${e.message}`));
-    } catch (cleanupError) {
-      Log.error(`Error during cleanup: ${cleanupError}`);
-    }
-    throw error;
+    Log.error(`Failed to wake up Rhubarb model: ${error.message}`);
+    // Don't throw - this is just a wake up call
   }
 }
 
-async function runRhubarb(inputPath, outputPath) {
-  Log.info(`Starting Rhubarb processing on ${inputPath}...`);
+export async function createVisemesWithRhubarb(audioBuffer) {
+  const timestamp = Date.now();
+  const outputPath = `/tmp/output-${timestamp}.json`;
+
+  Log.info(`Starting Rhubarb processing...`);
 
   try {
-    const proc = spawn("rhubarb", [
-      inputPath,
-      "-o",
-      outputPath,
-      "--exportFormat",
-      "json",
-      "--recognizer",
-      "phonetic",
-      "--machineReadable",
-      "--quiet",
-    ]);
+    // Convert audio buffer to base64 string
+    const audioBase64 = audioBuffer.toString('base64');
+    Log.info(`Converted audio buffer to base64 (${audioBase64.length} characters)`);
 
-    let stderr = "";
-    proc.stderr.on("data", (data) => {
-      stderr += data.toString();
-      if (stderr) Log.error(`Rhubarb stderr: ${stderr}`);
+    const replicate = new Replicate({
+      auth: process.env.REPLICATE_API_TOKEN,
+    });
+    
+    // Pass base64 string instead of File object
+    const output = await replicate.run(RHUBARB_MODEL, {
+      input: {
+        audio_data: audioBase64,
+      },
     });
 
-    let stdout = "";
-    proc.stdout.on("data", (data) => {
-      stdout += data.toString();
-      if (stdout) Log.info(`Rhubarb stdout: ${stdout}`);
-    });
-
-    await new Promise((resolve, reject) => {
-      proc.on("close", (code) => {
-        if (code === 0) {
-          Log.info("Rhubarb processing completed successfully");
-          resolve();
-        } else {
-          reject(
-            new Error(
-              `Rhubarb process exited with code ${code}. Error: ${stderr}`
-            )
-          );
-        }
-      });
-      proc.on("error", (err) => {
-        reject(new Error(`Failed to start Rhubarb: ${err.message}`));
-      });
-    });
+    await fs.writeFile(outputPath, output);
 
     Log.info(`Reading Rhubarb output from ${outputPath}`);
     const resultText = await fs.readFile(outputPath, "utf-8");
     const result = JSON.parse(resultText);
+
+    // Clean up temporary files
+    await fs.unlink(outputPath);
+
     Log.info("Successfully parsed Rhubarb output");
 
     return result;
   } catch (error) {
     Log.error(`Rhubarb processing failed: ${error.message}`);
-    // Gracefull degradation: If Rhubarb fails, return empty mouthCues array to continue app flow
+    
+    // Clean up temporary files on error
+    try {
+      await fs.unlink(outputPath);
+    } catch (cleanupError) {
+      Log.error(`Failed to clean up temporary files: ${cleanupError.message}`);
+    }
+    
+    // Graceful degradation: If Rhubarb fails, return empty mouthCues array to continue app flow
     return { mouthCues: [] };
   }
 }

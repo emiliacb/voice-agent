@@ -23,7 +23,7 @@ voice-agent/
 
 ## Architecture
 
-The application consists of three main components:
+The application consists of two main components:
 
 ### Frontend (`/frontend`)
 - **Vite-based** vanilla web application

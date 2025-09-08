@@ -36,9 +36,15 @@ The application consists of three main components:
 - **Rate limiting** with IP and route-based protection
 - **CORS configuration** for secure cross-origin requests
 
-## 3) Rhubarb
-A Replicate/Cog model that provides automatic lip synchronization analysis using Rhubarb Lip Sync by Daniel Wolf.
+### 3) Rhubarb
+- A Replicate/Cog model that provides automatic lip synchronization analysis using Rhubarb Lip Sync by Daniel Wolf.
 [https://github.com/emiliacb/replicate-rhubarb](https://github.com/emiliacb/replicate-rhubarb) 
+- Automatic Lip Sync Analysis: Generates mouth cue data from audio input
+- Multiple Audio Format Support: Handles MP3, WAV, and other common audio formats
+- Chunked Processing: Automatically splits long audio files into manageable chunks
+- JSON Output: Returns structured mouth cue data in JSON format
+- Phonetic Recognition: Uses phonetic recognition for accurate lip sync
+- Cloud-Ready: Deployed on Replicate for easy API access
 
 ## Local Development
 

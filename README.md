@@ -36,7 +36,7 @@ The application consists of three main components:
 - **Rate limiting** with IP and route-based protection
 - **CORS configuration** for secure cross-origin requests
 
-### 3) Rhubarb
+### 3) Rhubarb (Custom Replicate Service)
 - A Replicate/Cog model that provides automatic lip synchronization analysis using Rhubarb Lip Sync by Daniel Wolf.
 [https://github.com/emiliacb/replicate-rhubarb](https://github.com/emiliacb/replicate-rhubarb) 
 - Automatic Lip Sync Analysis: Generates mouth cue data from audio input

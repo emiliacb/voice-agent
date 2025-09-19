@@ -334,6 +334,35 @@ body {
     display: none;
 }
 
+.text-display {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-family: var(--system-font);
+    font-size: 1rem;
+    line-height: 1.4;
+    min-height: 3rem;
+    max-width: 20rem;
+    word-wrap: break-word;
+    margin-bottom: 1rem;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.text-display.streaming {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.text-display:not(:empty) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 #avatar {
     position: relative;
     width: 20rem;

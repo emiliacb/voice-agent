@@ -5,9 +5,12 @@ import { cors } from "hono/cors";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 import { Log } from "./utils/logger.mjs";
-import { createVisemesWithRhubarb, wakeUpRhubarbModel } from "./services/rhubarb.mjs";
+import {
+  createVisemesWithRhubarb,
+  wakeUpRhubarbModel,
+} from "./services/rhubarb.mjs";
 import { transcribeAudioReplicate } from "./services/speech-to-text.mjs";
-import { generateLLMResponseWithRetry } from "./services/llm.mjs";
+import { generateLLMResponseStreamWithRetry } from "./services/llm.mjs";
 import { generateAudioFromTextReplicate } from "./services/text-to-speech.mjs";
 
 config();
@@ -50,7 +53,7 @@ app.use("*", async (c, next) => {
 });
 
 app.get("/health", async (c) => {
-  await wakeUpRhubarbModel()
+  await wakeUpRhubarbModel();
   Log.info("Rhubarb model woken up successfully");
   return c.text("OK");
 });
@@ -61,7 +64,6 @@ app.post("/message", async (c) => {
     await ipLimiter.consume(c.req.ip);
     await routeLimiter.consume(c.req.url);
 
-    
     const formData = await c.req.formData();
     const audioFile = formData.get("audio");
 
@@ -72,20 +74,74 @@ app.post("/message", async (c) => {
     // Transcribe audio
     const transcriptionResult = await transcribeAudioReplicate(audioFile);
 
-    // Generate LLM response
-    let llmResult = await generateLLMResponseWithRetry(
-      transcriptionResult.transcription,
-    );
+    // Create a custom stream that handles both text and audio chunks
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          let accumulatedText = "";
+          let totalAudioOffset = 0; // Track cumulative audio duration
+          let allMouthCues = []; // Collect all mouth cues for final synchronization
+          
+          // Generate LLM response stream
+          for await (const chunk of generateLLMResponseStreamWithRetry(
+            transcriptionResult.transcription
+          )) {
+            accumulatedText += chunk;
+            
+            // Send text chunk
+            controller.enqueue(`data: ${JSON.stringify({ type: 'text', content: chunk })}\n\n`);
+            
+            // Generate audio from this chunk
+            const responseAudioBuffer = await generateAudioFromTextReplicate(chunk);
+            
+            // Process response audio with Rhubarb
+            const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
+            
+            // Adjust mouth cues timestamps to be absolute from the start
+            const adjustedMouthCues = rhubarbResult.mouthCues.map(cue => ({
+              ...cue,
+              start: cue.start + totalAudioOffset,
+              end: cue.end + totalAudioOffset
+            }));
+            
+            // Update total offset for next chunk
+            if (rhubarbResult.mouthCues.length > 0) {
+              totalAudioOffset += rhubarbResult.mouthCues[rhubarbResult.mouthCues.length - 1].end;
+            }
+            
+            // Collect mouth cues for final response
+            allMouthCues.push(...adjustedMouthCues);
+            
+            // Send audio chunk
+            controller.enqueue(`data: ${JSON.stringify({ 
+              type: 'audio', 
+              audio: responseAudioBuffer.toString("base64"),
+              mouthCues: adjustedMouthCues 
+            })}\n\n`);
+          }
+          
+          // Send completion signal with all mouth cues properly synchronized
+          controller.enqueue(`data: ${JSON.stringify({ 
+            type: 'complete',
+            allMouthCues: allMouthCues
+          })}\n\n`);
+          controller.close();
+        } catch (error) {
+          Log.error(`Streaming error: ${error}`);
+          controller.enqueue(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+          controller.close();
+        }
+      }
+    });
 
-    // Generate audio from LLM response
-    let responseAudioBuffer = await generateAudioFromTextReplicate(llmResult);
-
-    // Process response audio with Rhubarb
-    const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
-
-    return c.json({
-      audio: responseAudioBuffer.toString("base64"),
-      mouthCues: rhubarbResult.mouthCues,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': 'true',
+      },
     });
   } catch (error) {
     Log.error(`Processing error: ${error}`);
@@ -101,7 +157,10 @@ app.post("/message", async (c) => {
 
 const port = process.env.PORT || 3000;
 
-serve({
-  fetch: app.fetch,
-  port,
-}, () => Log.info(`Listening at ${port}`));
+serve(
+  {
+    fetch: app.fetch,
+    port,
+  },
+  () => Log.info(`Listening at ${port}`)
+);

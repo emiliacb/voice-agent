@@ -158,10 +158,24 @@ export async function sendAudioToServer() {
             audioWorker.onmessage = (e) => {
                 const { type, data, error } = e.data;
                 switch (type) {
+                    case "TEXT_CHUNK":
+                        // Update streaming text
+                        appState.state.streamingText = data.fullText;
+                        appState.state.isStreaming = true;
+                        break;
+                        
+                    case "AUDIO_CHUNK":
+                        // Handle individual audio chunks if needed
+                        // For now, we'll wait for the final processed audio
+                        break;
+                        
                     case "AUDIO_PROCESSED":
+                        appState.state.isStreaming = false;
                         resolve(data);
                         break;
+                        
                     case "ERROR":
+                        appState.state.isStreaming = false;
                         console.log("Error:", JSON.stringify(error, null, 2));
                         if (error.message === "Individual rate limit exceeded") {
                             showErrorToast(appState.domElements.i18n.individualRateLimit);

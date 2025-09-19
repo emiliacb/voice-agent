@@ -74,50 +74,74 @@ app.post("/message", async (c) => {
     // Transcribe audio
     const transcriptionResult = await transcribeAudioReplicate(audioFile);
 
-    let finalResult = [];
-
-    // Generate LLM response
-    for await (const chunk of generateLLMResponseStreamWithRetry(
-      transcriptionResult.transcription
-    )) {
-      // Generate audio from LLM response
-      let responseAudioBuffer = await generateAudioFromTextReplicate(chunk);
-
-      // Process response audio with Rhubarb
-      const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
-
-      finalResult.push({
-        audio: responseAudioBuffer,
-        mouthCues: rhubarbResult.mouthCues,
-      })
-    }
-
-    // Join all audio buffers and mouth cues from finalResult
-    const finalResponseAudioBuffer = Buffer.concat(finalResult.map(r => r.audio));
-    const finalRhubarbResult = {
-      mouthCues: (() => {
-        let offset = 0;
-        const cues = [];
-        for (const r of finalResult) {
-          for (const cue of r.mouthCues || []) {
-            cues.push({
+    // Create a custom stream that handles both text and audio chunks
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          let accumulatedText = "";
+          let totalAudioOffset = 0; // Track cumulative audio duration
+          let allMouthCues = []; // Collect all mouth cues for final synchronization
+          
+          // Generate LLM response stream
+          for await (const chunk of generateLLMResponseStreamWithRetry(
+            transcriptionResult.transcription
+          )) {
+            accumulatedText += chunk;
+            
+            // Send text chunk
+            controller.enqueue(`data: ${JSON.stringify({ type: 'text', content: chunk })}\n\n`);
+            
+            // Generate audio from this chunk
+            const responseAudioBuffer = await generateAudioFromTextReplicate(chunk);
+            
+            // Process response audio with Rhubarb
+            const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
+            
+            // Adjust mouth cues timestamps to be absolute from the start
+            const adjustedMouthCues = rhubarbResult.mouthCues.map(cue => ({
               ...cue,
-              start: cue.start + offset,
-              end: cue.end + offset,
-            });
+              start: cue.start + totalAudioOffset,
+              end: cue.end + totalAudioOffset
+            }));
+            
+            // Update total offset for next chunk
+            if (rhubarbResult.mouthCues.length > 0) {
+              totalAudioOffset += rhubarbResult.mouthCues[rhubarbResult.mouthCues.length - 1].end;
+            }
+            
+            // Collect mouth cues for final response
+            allMouthCues.push(...adjustedMouthCues);
+            
+            // Send audio chunk
+            controller.enqueue(`data: ${JSON.stringify({ 
+              type: 'audio', 
+              audio: responseAudioBuffer.toString("base64"),
+              mouthCues: adjustedMouthCues 
+            })}\n\n`);
           }
-          // Update offset to the end of the last cue in this chunk
-          if (r.mouthCues && r.mouthCues.length > 0) {
-            offset += r.mouthCues[r.mouthCues.length - 1].end;
-          }
+          
+          // Send completion signal with all mouth cues properly synchronized
+          controller.enqueue(`data: ${JSON.stringify({ 
+            type: 'complete',
+            allMouthCues: allMouthCues
+          })}\n\n`);
+          controller.close();
+        } catch (error) {
+          Log.error(`Streaming error: ${error}`);
+          controller.enqueue(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+          controller.close();
         }
-        return cues;
-      })()
-    };
+      }
+    });
 
-    return c.json({
-      audio: finalResponseAudioBuffer.toString("base64"),
-      mouthCues: finalRhubarbResult.mouthCues,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': 'true',
+      },
     });
   } catch (error) {
     Log.error(`Processing error: ${error}`);

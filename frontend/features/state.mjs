@@ -15,13 +15,15 @@ class AppState {
                 mediaRecorder: null,
                 audioChunks: [],
                 timeoutId: null,
+                streamingText: "",
+                isStreaming: false,
             },
             {
                 set(target, prop, value) {
                     try {
                         target[prop] = value;
 
-                        const { mouthElement, pttButton, i18n } = AppState.instance.domElements;
+                        const { mouthElement, pttButton, i18n, textDisplay } = AppState.instance.domElements;
 
                         switch (prop) {
                             case "currentCue":
@@ -48,6 +50,18 @@ class AppState {
                                     pttButton.disabled = value;
                                 }
                                 break;
+
+                            case "streamingText":
+                                if (textDisplay) {
+                                    textDisplay.textContent = value;
+                                }
+                                break;
+
+                            case "isStreaming":
+                                if (textDisplay) {
+                                    textDisplay.classList.toggle("streaming", value);
+                                }
+                                break;
                         }
 
                         return true;
@@ -65,7 +79,8 @@ class AppState {
             mouthElement: null,
             langSelector: null,
             errorMessage: null,
-            i18n: null
+            i18n: null,
+            textDisplay: null
         };
     }
 

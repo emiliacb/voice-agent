@@ -11,6 +11,7 @@ export function getDomElements() {
         errorMessage: document.getElementById("errorMessage"),
         toastContainer: document.getElementById("toastContainer"),
         closeErrorMessage: document.getElementById("closeErrorMessage"),
+        textDisplay: document.getElementById("textDisplay"),
     };
 
     // Set DOM elements in state

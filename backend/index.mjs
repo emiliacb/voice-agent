@@ -5,9 +5,12 @@ import { cors } from "hono/cors";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 import { Log } from "./utils/logger.mjs";
-import { createVisemesWithRhubarb, wakeUpRhubarbModel } from "./services/rhubarb.mjs";
+import {
+  createVisemesWithRhubarb,
+  wakeUpRhubarbModel,
+} from "./services/rhubarb.mjs";
 import { transcribeAudioReplicate } from "./services/speech-to-text.mjs";
-import { generateLLMResponseWithRetry } from "./services/llm.mjs";
+import { generateLLMResponseStreamWithRetry } from "./services/llm.mjs";
 import { generateAudioFromTextReplicate } from "./services/text-to-speech.mjs";
 
 config();
@@ -50,7 +53,7 @@ app.use("*", async (c, next) => {
 });
 
 app.get("/health", async (c) => {
-  await wakeUpRhubarbModel()
+  await wakeUpRhubarbModel();
   Log.info("Rhubarb model woken up successfully");
   return c.text("OK");
 });
@@ -61,7 +64,6 @@ app.post("/message", async (c) => {
     await ipLimiter.consume(c.req.ip);
     await routeLimiter.consume(c.req.url);
 
-    
     const formData = await c.req.formData();
     const audioFile = formData.get("audio");
 
@@ -72,20 +74,50 @@ app.post("/message", async (c) => {
     // Transcribe audio
     const transcriptionResult = await transcribeAudioReplicate(audioFile);
 
+    let finalResult = [];
+
     // Generate LLM response
-    let llmResult = await generateLLMResponseWithRetry(
-      transcriptionResult.transcription,
-    );
+    for await (const chunk of generateLLMResponseStreamWithRetry(
+      transcriptionResult.transcription
+    )) {
+      // Generate audio from LLM response
+      let responseAudioBuffer = await generateAudioFromTextReplicate(chunk);
 
-    // Generate audio from LLM response
-    let responseAudioBuffer = await generateAudioFromTextReplicate(llmResult);
+      // Process response audio with Rhubarb
+      const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
 
-    // Process response audio with Rhubarb
-    const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
+      finalResult.push({
+        audio: responseAudioBuffer,
+        mouthCues: rhubarbResult.mouthCues,
+      })
+    }
+
+    // Join all audio buffers and mouth cues from finalResult
+    const finalResponseAudioBuffer = Buffer.concat(finalResult.map(r => r.audio));
+    const finalRhubarbResult = {
+      mouthCues: (() => {
+        let offset = 0;
+        const cues = [];
+        for (const r of finalResult) {
+          for (const cue of r.mouthCues || []) {
+            cues.push({
+              ...cue,
+              start: cue.start + offset,
+              end: cue.end + offset,
+            });
+          }
+          // Update offset to the end of the last cue in this chunk
+          if (r.mouthCues && r.mouthCues.length > 0) {
+            offset += r.mouthCues[r.mouthCues.length - 1].end;
+          }
+        }
+        return cues;
+      })()
+    };
 
     return c.json({
-      audio: responseAudioBuffer.toString("base64"),
-      mouthCues: rhubarbResult.mouthCues,
+      audio: finalResponseAudioBuffer.toString("base64"),
+      mouthCues: finalRhubarbResult.mouthCues,
     });
   } catch (error) {
     Log.error(`Processing error: ${error}`);
@@ -101,7 +133,10 @@ app.post("/message", async (c) => {
 
 const port = process.env.PORT || 3000;
 
-serve({
-  fetch: app.fetch,
-  port,
-}, () => Log.info(`Listening at ${port}`));
+serve(
+  {
+    fetch: app.fetch,
+    port,
+  },
+  () => Log.info(`Listening at ${port}`)
+);

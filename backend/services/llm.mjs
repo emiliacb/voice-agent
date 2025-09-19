@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+import { generateText } from "ai";
+import { google } from "@ai-sdk/google";
 import { Log } from "../utils/logger.mjs";
 
 const SYSTEM_PROMPT = () => `
@@ -40,45 +41,16 @@ export async function generateLLMResponse(
   Log.info("Generating LLM response...");
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey,
+    const result = await generateText({
+      model: google("gemini-2.5-flash-lite", {
+        apiKey,
+      }),
+      system: SYSTEM_PROMPT(),
+      prompt: userMessage,
     });
-
-    const config = {
-      thinkingConfig: {
-        thinkingBudget: 0,
-      },
-    };
-    const model = "gemini-2.5-flash-lite";
-    const contents = [
-      {
-        role: "user",
-        parts: [
-          {
-            text:
-              SYSTEM_PROMPT() +
-              "\n\nUser message: " +
-              userMessage,
-          },
-        ],
-      },
-    ];
-
-    const response = await ai.models.generateContentStream({
-      model,
-      config,
-      contents,
-    });
-
-    let fullResponse = "";
-    for await (const chunk of response) {
-      if (chunk.text) {
-        fullResponse += chunk.text;
-      }
-    }
 
     Log.info("LLM response generated successfully");
-    return fullResponse;
+    return result.text;
   } catch (error) {
     Log.error(`Gemini LLM generation failed: ${error}`);
     throw error;

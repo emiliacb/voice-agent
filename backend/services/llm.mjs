@@ -48,6 +48,7 @@ export async function generateLLMResponse(
       thinkingConfig: {
         thinkingBudget: 0,
       },
+      tools: [{ googleSearch: {} }],
     };
     const model = "gemini-2.5-flash-lite";
     const contents = [

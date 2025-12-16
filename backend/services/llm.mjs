@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { DynamicRetrievalConfigMode, GoogleGenAI } from "@google/genai";
 import { Log } from "../utils/logger.mjs";
 
 const SYSTEM_PROMPT = () => `
@@ -29,6 +29,16 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_FALLBACK,
 ];
 
+function isTruthyEnv(value, defaultValue = false) {
+  if (value === undefined || value === null || value === "") return defaultValue;
+  return ["1", "true", "yes", "y", "on"].includes(String(value).toLowerCase());
+}
+
+function getNumberEnv(value, defaultValue) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : defaultValue;
+}
+
 export async function generateLLMResponse(
   userMessage,
   apiKey = GEMINI_API_KEYS[0]
@@ -44,10 +54,41 @@ export async function generateLLMResponse(
       apiKey,
     });
 
+    // Google Search grounding (Gemini). Enabled by default; disable with:
+    // GEMINI_GOOGLE_SEARCH_GROUNDING=false
+    const enableGoogleSearchGrounding = isTruthyEnv(
+      process.env.GEMINI_GOOGLE_SEARCH_GROUNDING,
+      true
+    );
+    const googleSearchDynamicThreshold = Math.min(
+      1,
+      Math.max(
+        0,
+        getNumberEnv(
+      process.env.GEMINI_GOOGLE_SEARCH_DYNAMIC_THRESHOLD,
+      0.3
+        )
+      )
+    );
+
     const config = {
       thinkingConfig: {
         thinkingBudget: 0,
       },
+      ...(enableGoogleSearchGrounding
+        ? {
+            tools: [
+              {
+                googleSearchRetrieval: {
+                  dynamicRetrievalConfig: {
+                    mode: DynamicRetrievalConfigMode.MODE_DYNAMIC,
+                    dynamicThreshold: googleSearchDynamicThreshold,
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
     };
     const model = "gemini-2.5-flash-lite";
     const contents = [
@@ -71,9 +112,19 @@ export async function generateLLMResponse(
     });
 
     let fullResponse = "";
+    let groundingLogged = false;
     for await (const chunk of response) {
       if (chunk.text) {
         fullResponse += chunk.text;
+      }
+      if (
+        !groundingLogged &&
+        chunk?.candidates?.[0]?.groundingMetadata?.groundingChunks?.length
+      ) {
+        const count =
+          chunk.candidates[0].groundingMetadata.groundingChunks.length;
+        Log.info(`Gemini grounding enabled (chunks=${count})`);
+        groundingLogged = true;
       }
     }
 

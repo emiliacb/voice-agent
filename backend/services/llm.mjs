@@ -48,16 +48,8 @@ export async function generateLLMResponse(
       thinkingConfig: {
         thinkingBudget: 0,
       },
-      // Google Search grounding (Gemini): always enabled.
-      tools: [
-        {
-          googleSearchRetrieval: {
-            dynamicRetrievalConfig: {
-              mode: "MODE_DYNAMIC",
-            },
-          },
-        },
-      ],
+      // Google Search grounding (Gemini): enabled.
+      tools: [{ googleSearch: {} }],
     };
     const model = "gemini-2.5-flash-lite";
     const contents = [

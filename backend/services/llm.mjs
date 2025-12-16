@@ -1,4 +1,4 @@
-import { DynamicRetrievalConfigMode, GoogleGenAI } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Log } from "../utils/logger.mjs";
 
 const SYSTEM_PROMPT = () => `
@@ -53,7 +53,7 @@ export async function generateLLMResponse(
         {
           googleSearchRetrieval: {
             dynamicRetrievalConfig: {
-              mode: DynamicRetrievalConfigMode.MODE_DYNAMIC,
+              mode: "MODE_DYNAMIC",
             },
           },
         },
@@ -81,19 +81,9 @@ export async function generateLLMResponse(
     });
 
     let fullResponse = "";
-    let groundingLogged = false;
     for await (const chunk of response) {
       if (chunk.text) {
         fullResponse += chunk.text;
-      }
-      if (
-        !groundingLogged &&
-        chunk?.candidates?.[0]?.groundingMetadata?.groundingChunks?.length
-      ) {
-        const count =
-          chunk.candidates[0].groundingMetadata.groundingChunks.length;
-        Log.info(`Gemini grounding enabled (chunks=${count})`);
-        groundingLogged = true;
       }
     }
 

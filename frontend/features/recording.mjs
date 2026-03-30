@@ -119,6 +119,19 @@ async function getAudioDuration(audioBlob) {
     });
 }
 
+function appendChatMessage(role, text) {
+    const { chatContainer } = appState.domElements;
+    const msgEl = document.createElement('div');
+    msgEl.classList.add('chat-message', role);
+    msgEl.textContent = text;
+    chatContainer.appendChild(msgEl);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return msgEl;
+}
+
+let currentAssistantMessage = null;
+let currentUserText = null;
+
 export async function sendAudioToServer() {
     try {
         appState.state.isLoading = true;
@@ -153,13 +166,43 @@ export async function sendAudioToServer() {
             // Continue processing if duration check fails
         }
 
-        // Create a promise that will resolve when the worker sends back the result
+        currentAssistantMessage = null;
+        currentUserText = null;
+
+        // Create a promise that will resolve when the worker sends back audio
         const workerResponse = new Promise((resolve, reject) => {
             audioWorker.onmessage = (e) => {
                 const { type, data, error } = e.data;
                 switch (type) {
+                    case "TRANSCRIPTION":
+                        currentUserText = data.text;
+                        appendChatMessage("user", data.text);
+                        break;
+                    case "TEXT_DELTA":
+                        if (!currentAssistantMessage) {
+                            currentAssistantMessage = appendChatMessage("assistant", data.delta);
+                        } else {
+                            currentAssistantMessage.textContent += data.delta;
+                            appState.domElements.chatContainer.scrollTop = appState.domElements.chatContainer.scrollHeight;
+                        }
+                        break;
                     case "AUDIO_PROCESSED":
                         resolve(data);
+                        break;
+                    case "DONE":
+                        {
+                            const assistantText = currentAssistantMessage ? currentAssistantMessage.textContent : null;
+                            if (currentUserText && assistantText) {
+                                appState.state.chatHistory.push(
+                                    { role: 'user', content: currentUserText },
+                                    { role: 'assistant', content: assistantText }
+                                );
+                                // Keep only last 5 messages
+                                appState.state.chatHistory = appState.state.chatHistory.slice(-5);
+                            }
+                            currentAssistantMessage = null;
+                            currentUserText = null;
+                        }
                         break;
                     case "ERROR":
                         console.log("Error:", JSON.stringify(error, null, 2));
@@ -174,20 +217,22 @@ export async function sendAudioToServer() {
                         appState.state.isRecording = false;
                         appState.domElements.pttButton.disabled = true;
                         appState.domElements.pttButton.classList.remove("recording");
+                        currentAssistantMessage = null;
                         console.error("Error processing audio:", error);
-                        reject(new Error(error));
+                        reject(new Error(error.message || error));
                         break;
                 }
             };
         });
 
-        // Send audio chunks to worker
+        // Send audio chunks to worker with chat history
         audioWorker.postMessage({
             type: "SEND_AUDIO",
             data: {
                 audioChunks: appState.state.audioChunks,
                 backendUrl: BACKEND_BASE_URL,
                 currentLanguage: appState.state.currentLanguage,
+                chatHistory: appState.state.chatHistory,
             },
         });
 

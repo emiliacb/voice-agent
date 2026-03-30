@@ -10,6 +10,7 @@ export function getDomElements() {
         mouthElement: document.querySelector(".mouth"),
         errorMessage: document.getElementById("errorMessage"),
         toastContainer: document.getElementById("toastContainer"),
+        chatContainer: document.getElementById("chatContainer"),
         closeErrorMessage: document.getElementById("closeErrorMessage"),
     };
 

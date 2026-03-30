@@ -15,6 +15,7 @@ class AppState {
                 mediaRecorder: null,
                 audioChunks: [],
                 timeoutId: null,
+                chatHistory: [],
             },
             {
                 set(target, prop, value) {
@@ -64,6 +65,7 @@ class AppState {
             pttButton: null,
             mouthElement: null,
             langSelector: null,
+            chatContainer: null,
             errorMessage: null,
             i18n: null
         };

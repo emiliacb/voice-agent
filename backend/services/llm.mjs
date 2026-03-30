@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+import { streamText } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { Log } from "../utils/logger.mjs";
 
 const SYSTEM_PROMPT = () => `
@@ -29,86 +30,44 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_FALLBACK,
 ];
 
-export async function generateLLMResponse(
-  userMessage,
-  apiKey = GEMINI_API_KEYS[0]
-) {
-  if (!userMessage) {
-    throw new Error("No message provided");
-  }
-
-  Log.info("Generating LLM response...");
+export async function generateLLMResponseStream(userMessage, chatHistory = [], apiKey = GEMINI_API_KEYS[0]) {
+  if (!userMessage) throw new Error("No message provided");
+  Log.info("Generating LLM response stream...");
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey,
-    });
-
-    const config = {
-      thinkingConfig: {
-        thinkingBudget: 0,
+    const google = createGoogleGenerativeAI({ apiKey });
+    const result = streamText({
+      model: google('gemini-2.5-flash-lite'),
+      system: SYSTEM_PROMPT(),
+      messages: [
+        ...chatHistory,
+        { role: 'user', content: userMessage },
+      ],
+      providerOptions: {
+        google: {
+          thinkingConfig: { thinkingBudget: 0 },
+          useSearchGrounding: true,
+        },
       },
-      tools: [{ googleSearch: {} }],
-    };
-    const model = "gemini-2.5-flash-lite";
-    const contents = [
-      {
-        role: "user",
-        parts: [
-          {
-            text:
-              SYSTEM_PROMPT() +
-              "\n\nUser message: " +
-              userMessage,
-          },
-        ],
-      },
-    ];
-
-    const response = await ai.models.generateContentStream({
-      model,
-      config,
-      contents,
     });
-
-    let fullResponse = "";
-    for await (const chunk of response) {
-      if (chunk.text) {
-        fullResponse += chunk.text;
-      }
-    }
-
-    Log.info("LLM response generated successfully");
-    return fullResponse;
+    return result;
   } catch (error) {
     Log.error(`Gemini LLM generation failed: ${error}`);
     throw error;
   }
 }
 
-export async function generateLLMResponseWithRetry(
-  userMessage = "Contame un chiste de maradona",
-) {
+export async function generateLLMResponseStreamWithRetry(userMessage, chatHistory = []) {
   let lastError;
   for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
     try {
       Log.info(`Trying LLM response with Gemini API key #${i + 1}`);
-      const response = await generateLLMResponse(
-        userMessage,
-        GEMINI_API_KEYS[i]
-      );
-      if (response) {
-        Log.info(`LLM response succeeded with Gemini API key #${i + 1}. ${JSON.stringify(response)}`);
-        return response;
-      }
+      const result = await generateLLMResponseStream(userMessage, chatHistory, GEMINI_API_KEYS[i]);
+      return result;
     } catch (err) {
-      Log.error(
-        `LLM response failed with Gemini API key #${i + 1}: ${err.message}`
-      );
+      Log.error(`LLM response failed with Gemini API key #${i + 1}: ${err.message}`);
       lastError = err;
     }
   }
-  Log.error("All Gemini API keys failed for LLM response.");
-  console.error(lastError);
   throw new Error("Retry Failed: Used all valid Gemini API keys available");
 }

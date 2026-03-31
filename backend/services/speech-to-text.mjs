@@ -1,6 +1,6 @@
-import OpenAI from "openai";
+import { experimental_transcribe as transcribe } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import Replicate from "replicate";
-
 import { Log } from "../utils/logger.mjs";
 
 const WHISPER_MODEL =
@@ -36,24 +36,17 @@ export async function transcribeAudioReplicate(audioFile) {
 }
 
 export async function transcribeAudioOpenAI(audioFile) {
-  if (!audioFile) {
-    throw new Error("No audio file provided");
-  }
-
+  if (!audioFile) throw new Error("No audio file provided");
   Log.info("Starting audio transcription...");
-
   try {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const buffer = Buffer.from(await audioFile.arrayBuffer());
+    const result = await transcribe({
+      model: openai.transcription('whisper-1'),
+      audio: buffer,
     });
-
-    const transcription = await openai.audio.transcriptions.create({
-      file: audioFile,
-      model: "whisper-1",
-    });
-
     Log.info("Transcription completed successfully");
-    return { transcription: transcription.text };
+    return { transcription: result.text };
   } catch (error) {
     Log.error(`OpenAI transcription failed: ${error}`);
     throw error;

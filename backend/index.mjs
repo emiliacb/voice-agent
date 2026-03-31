@@ -7,7 +7,7 @@ import { RateLimiterMemory } from "rate-limiter-flexible";
 import { Log } from "./utils/logger.mjs";
 import { createVisemesWithRhubarb, wakeUpRhubarbModel } from "./services/rhubarb.mjs";
 import { transcribeAudioReplicate } from "./services/speech-to-text.mjs";
-import { generateLLMResponseWithRetry } from "./services/llm.mjs";
+import { generateLLMResponseStreamWithRetry } from "./services/llm.mjs";
 import { generateAudioFromTextReplicate } from "./services/text-to-speech.mjs";
 
 config();
@@ -57,45 +57,68 @@ app.get("/health", async (c) => {
 
 app.post("/message", async (c) => {
   try {
-    // Rate limit
     await ipLimiter.consume(c.req.ip);
     await routeLimiter.consume(c.req.url);
 
-    
     const formData = await c.req.formData();
     const audioFile = formData.get("audio");
+    const chatHistoryRaw = formData.get("chatHistory");
+    const chatHistory = chatHistoryRaw ? JSON.parse(chatHistoryRaw) : [];
 
-    if (!audioFile) {
-      return c.json({ error: "No audio file provided" }, 400);
-    }
+    if (!audioFile) return c.json({ error: "No audio file provided" }, 400);
 
-    // Transcribe audio
     const transcriptionResult = await transcribeAudioReplicate(audioFile);
 
-    // Generate LLM response
-    let llmResult = await generateLLMResponseWithRetry(
-      transcriptionResult.transcription,
+    return new Response(
+      new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          const send = (event, data) => {
+            controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          };
+
+          try {
+            send("transcription", { text: transcriptionResult.transcription });
+
+            const result = await generateLLMResponseStreamWithRetry(
+              transcriptionResult.transcription,
+              chatHistory
+            );
+
+            let fullText = "";
+            for await (const chunk of result.textStream) {
+              fullText += chunk;
+              send("text-delta", { delta: chunk });
+            }
+
+            const responseAudioBuffer = await generateAudioFromTextReplicate(fullText);
+            const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
+
+            send("audio", {
+              audio: responseAudioBuffer.toString("base64"),
+              mouthCues: rhubarbResult.mouthCues,
+            });
+
+            send("done", {});
+            controller.close();
+          } catch (error) {
+            Log.error(`SSE processing error: ${error}`);
+            send("error", { error: "Failed to process audio", details: error.message });
+            controller.close();
+          }
+        }
+      }),
+      {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      }
     );
-
-    // Generate audio from LLM response
-    let responseAudioBuffer = await generateAudioFromTextReplicate(llmResult);
-
-    // Process response audio with Rhubarb
-    const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
-
-    return c.json({
-      audio: responseAudioBuffer.toString("base64"),
-      mouthCues: rhubarbResult.mouthCues,
-    });
   } catch (error) {
     Log.error(`Processing error: ${error}`);
-    return c.json(
-      {
-        error: "Failed to process audio",
-        details: error.message,
-      },
-      500
-    );
+    return c.json({ error: "Failed to process audio", details: error.message }, 500);
   }
 });
 

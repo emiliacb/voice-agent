@@ -1,6 +1,6 @@
-import OpenAI from "openai";
+import { experimental_generateSpeech as generateSpeech } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import Replicate from "replicate";
-
 import { Log } from "../utils/logger.mjs";
 
 const TTS_MODEL = "minimax/speech-02-turbo";
@@ -55,37 +55,23 @@ export async function generateAudioFromTextReplicate(text, detectedLanguage) {
 }
 
 export async function generateAudioFromTextOpenAI(text) {
-  if (!text) {
-    throw new Error("No text provided");
-  }
-
-  Log.info(
-    `Starting text-to-speech generation for text: "${text.substring(0, 30)}..."`
-  );
-
+  if (!text) throw new Error("No text provided");
+  Log.info(`Starting text-to-speech generation for text: "${text.substring(0, 30)}..."`);
   try {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const result = await generateSpeech({
+      model: openai.speech('gpt-4o-mini-tts'),
+      text,
+      voice: 'verse',
+      providerOptions: {
+        openai: {
+          response_format: 'wav',
+          instructions: `Argentine accent. The 'll' should sound like 'sh', 'z' should sound like 'ss' and 'v' should sound like 'b'. Friendly and mystical.`,
+        },
+      },
     });
-
-    const response = await openai.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice: "verse",
-      response_format: "wav",
-      input: text,
-      instructions: `Argentine accent. The 'll' should sound like 'sh', 'z' should sound like 'ss' and 'v' should sound like 'b'. Friendly and mystical.`,
-    });
-
-    Log.info("OpenAI TTS API response received");
-    const arrayBuffer = await response.arrayBuffer();
-
-    // Convert ArrayBuffer to Buffer
-    const buffer = Buffer.from(arrayBuffer);
-
-    if (!buffer || buffer.length === 0) {
-      throw new Error("Generated empty audio buffer");
-    }
-
+    const buffer = Buffer.from(result.audio);
+    if (!buffer || buffer.length === 0) throw new Error("Generated empty audio buffer");
     Log.info(`Audio generated successfully (${buffer.length} bytes)`);
     return buffer;
   } catch (error) {

@@ -731,31 +731,26 @@ This extended mouth shape is optional. Whether there should be any visible diffe
     pointer-events: auto;
 }
 
-@keyframes fadeIn {
+@keyframes chatFadeIn {
     from { opacity: 0; transform: translateY(0.5rem); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chatFadeOut {
+    from { opacity: 1; transform: translateY(0); max-height: 10rem; margin-bottom: 0; }
+    to { opacity: 0; transform: translateY(-0.5rem); max-height: 0; margin-bottom: -0.5rem; }
 }
 
 .chat-container {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-height: 25vh;
-    overflow-y: auto;
+    min-height: 8rem;
+    overflow: hidden;
     padding: 0.5rem 1rem;
     width: 100%;
     max-width: 22rem;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent-color) transparent;
-}
-
-.chat-container::-webkit-scrollbar {
-    width: 4px;
-}
-
-.chat-container::-webkit-scrollbar-thumb {
-    background-color: var(--accent-color);
-    border-radius: 2px;
+    justify-content: flex-end;
 }
 
 .chat-message {
@@ -765,8 +760,13 @@ This extended mouth shape is optional. Whether there should be any visible diffe
     font-size: 0.85rem;
     max-width: 85%;
     word-wrap: break-word;
-    animation: fadeIn 0.3s ease;
+    animation: chatFadeIn 0.4s ease both;
     line-height: 1.3;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.chat-message.fade-out {
+    animation: chatFadeOut 0.4s ease forwards;
 }
 
 .chat-message.user {

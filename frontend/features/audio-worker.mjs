@@ -88,6 +88,9 @@ async function sendAudioToServer({audioChunks, backendUrl, currentLanguage, chat
                             });
                         }
                         break;
+                    case 'synthesizing':
+                        self.postMessage({ type: 'SYNTHESIZING' });
+                        break;
                     case 'error':
                         self.postMessage({ type: 'ERROR', error: { message: data.details || data.error } });
                         break;

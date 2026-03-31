@@ -91,6 +91,8 @@ app.post("/message", async (c) => {
               send("text-delta", { delta: chunk });
             }
 
+            send("synthesizing", {});
+
             const responseAudioBuffer = await generateAudioFromTextReplicate(fullText);
             const rhubarbResult = await createVisemesWithRhubarb(responseAudioBuffer);
 

@@ -119,18 +119,67 @@ async function getAudioDuration(audioBlob) {
     });
 }
 
+const MAX_VISIBLE_MESSAGES = 2;
+
+function removeOldMessages() {
+    const { chatContainer } = appState.domElements;
+    const messages = chatContainer.querySelectorAll('.chat-message:not(.fade-out)');
+    while (messages.length > MAX_VISIBLE_MESSAGES) {
+        const oldest = messages[0];
+        oldest.classList.add('fade-out');
+        oldest.addEventListener('animationend', () => oldest.remove(), { once: true });
+        // Update NodeList reference manually
+        break;
+    }
+}
+
+function trimVisibleMessages() {
+    const { chatContainer } = appState.domElements;
+    let visible = chatContainer.querySelectorAll('.chat-message:not(.fade-out)');
+    while (visible.length > MAX_VISIBLE_MESSAGES) {
+        const oldest = visible[0];
+        oldest.classList.add('fade-out');
+        oldest.addEventListener('animationend', () => oldest.remove(), { once: true });
+        visible = chatContainer.querySelectorAll('.chat-message:not(.fade-out)');
+    }
+}
+
 function appendChatMessage(role, text) {
     const { chatContainer } = appState.domElements;
+    trimVisibleMessages();
     const msgEl = document.createElement('div');
     msgEl.classList.add('chat-message', role);
     msgEl.textContent = text;
     chatContainer.appendChild(msgEl);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
     return msgEl;
 }
 
+// Word-by-word animation queue
+let wordQueue = [];
+let isAnimatingWords = false;
 let currentAssistantMessage = null;
 let currentUserText = null;
+
+function enqueueWords(text) {
+    // Split incoming chunk into words, preserving spaces
+    const words = text.split(/(\s+)/);
+    wordQueue.push(...words);
+    if (!isAnimatingWords) drainWordQueue();
+}
+
+function drainWordQueue() {
+    if (wordQueue.length === 0) {
+        isAnimatingWords = false;
+        return;
+    }
+    isAnimatingWords = true;
+    const word = wordQueue.shift();
+    if (currentAssistantMessage) {
+        currentAssistantMessage.textContent += word;
+    }
+    const delay = word.trim() ? 30 : 10;
+    setTimeout(drainWordQueue, delay);
+}
 
 export async function sendAudioToServer() {
     try {
@@ -180,10 +229,14 @@ export async function sendAudioToServer() {
                         break;
                     case "TEXT_DELTA":
                         if (!currentAssistantMessage) {
-                            currentAssistantMessage = appendChatMessage("assistant", data.delta);
-                        } else {
-                            currentAssistantMessage.textContent += data.delta;
-                            appState.domElements.chatContainer.scrollTop = appState.domElements.chatContainer.scrollHeight;
+                            currentAssistantMessage = appendChatMessage("assistant", "");
+                        }
+                        enqueueWords(data.delta);
+                        break;
+                    case "SYNTHESIZING":
+                        {
+                            const { pttButton, i18n } = appState.domElements;
+                            pttButton.textContent = i18n.synthesizing;
                         }
                         break;
                     case "AUDIO_PROCESSED":
@@ -191,13 +244,18 @@ export async function sendAudioToServer() {
                         break;
                     case "DONE":
                         {
+                            // Flush remaining words immediately
+                            if (currentAssistantMessage && wordQueue.length > 0) {
+                                currentAssistantMessage.textContent += wordQueue.join('');
+                                wordQueue = [];
+                                isAnimatingWords = false;
+                            }
                             const assistantText = currentAssistantMessage ? currentAssistantMessage.textContent : null;
                             if (currentUserText && assistantText) {
                                 appState.state.chatHistory.push(
                                     { role: 'user', content: currentUserText },
                                     { role: 'assistant', content: assistantText }
                                 );
-                                // Keep only last 5 messages
                                 appState.state.chatHistory = appState.state.chatHistory.slice(-5);
                             }
                             currentAssistantMessage = null;

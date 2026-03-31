@@ -119,34 +119,17 @@ async function getAudioDuration(audioBlob) {
     });
 }
 
-const MAX_VISIBLE_MESSAGES = 2;
-
-function removeOldMessages() {
+function fadeOutAllMessages() {
     const { chatContainer } = appState.domElements;
-    const messages = chatContainer.querySelectorAll('.chat-message:not(.fade-out)');
-    while (messages.length > MAX_VISIBLE_MESSAGES) {
-        const oldest = messages[0];
-        oldest.classList.add('fade-out');
-        oldest.addEventListener('animationend', () => oldest.remove(), { once: true });
-        // Update NodeList reference manually
-        break;
-    }
-}
-
-function trimVisibleMessages() {
-    const { chatContainer } = appState.domElements;
-    let visible = chatContainer.querySelectorAll('.chat-message:not(.fade-out)');
-    while (visible.length > MAX_VISIBLE_MESSAGES) {
-        const oldest = visible[0];
-        oldest.classList.add('fade-out');
-        oldest.addEventListener('animationend', () => oldest.remove(), { once: true });
-        visible = chatContainer.querySelectorAll('.chat-message:not(.fade-out)');
+    const visible = chatContainer.querySelectorAll('.chat-message:not(.fade-out)');
+    for (const msg of visible) {
+        msg.classList.add('fade-out');
+        msg.addEventListener('animationend', () => msg.remove(), { once: true });
     }
 }
 
 function appendChatMessage(role, text) {
     const { chatContainer } = appState.domElements;
-    trimVisibleMessages();
     const msgEl = document.createElement('div');
     msgEl.classList.add('chat-message', role);
     msgEl.textContent = text;
@@ -177,7 +160,7 @@ function drainWordQueue() {
     if (currentAssistantMessage) {
         currentAssistantMessage.textContent += word;
     }
-    const delay = word.trim() ? 30 : 10;
+    const delay = word.trim() ? 60 : 20;
     setTimeout(drainWordQueue, delay);
 }
 
@@ -224,6 +207,7 @@ export async function sendAudioToServer() {
                 const { type, data, error } = e.data;
                 switch (type) {
                     case "TRANSCRIPTION":
+                        fadeOutAllMessages();
                         currentUserText = data.text;
                         appendChatMessage("user", data.text);
                         break;

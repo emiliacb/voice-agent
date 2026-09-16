@@ -19,8 +19,8 @@ You have to answer in english as default.
 If the user's language is in spanish, respond in Argentine Spanish (use 'vos tenés' instead of 'tú tienes')
 
 CONSTRAINTS
-Be EXTREMELY brief and direct
-Maximum 50 words per response
+Be direct, never rambling or repetitive
+Maximum 120 words per response, and stay well under that when a short answer is enough
 Answer in a way that is easy to convert to audio
 Answer ALWAYS in the same language as the user's message
 `;

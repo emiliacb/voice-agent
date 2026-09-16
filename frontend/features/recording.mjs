@@ -1,5 +1,6 @@
 import appState from './state.mjs';
 import { animateShapes, stopAnimation } from './animation.mjs';
+import { buildCaptionSchedule, startCaptions, resetCaptions } from './captions.mjs';
 import { getRecordType } from '../utils/get-record-type.mjs';
 import { playIfSupported } from '../utils/get-play-permissions.mjs';
 import { showErrorToast } from '../utils/error.mjs';
@@ -137,31 +138,27 @@ function appendChatMessage(role, text) {
     return msgEl;
 }
 
-// Word-by-word animation queue
-let wordQueue = [];
-let isAnimatingWords = false;
-let currentAssistantMessage = null;
+// The assistant text is buffered while the LLM streams and the voice is
+// synthesized, and only revealed word by word once the audio starts playing.
+let currentAssistantText = "";
 let currentUserText = null;
 
-function enqueueWords(text) {
-    // Split incoming chunk into words, preserving spaces
-    const words = text.split(/(\s+)/);
-    wordQueue.push(...words);
-    if (!isAnimatingWords) drainWordQueue();
-}
+/**
+ * Resolves once the audio element knows its duration, so the caption schedule
+ * can fall back to it when Rhubarb returned no mouth cues.
+ */
+function waitForAudioMetadata(audio) {
+    if (Number.isFinite(audio.duration) && audio.duration > 0) return Promise.resolve();
 
-function drainWordQueue() {
-    if (wordQueue.length === 0) {
-        isAnimatingWords = false;
-        return;
-    }
-    isAnimatingWords = true;
-    const word = wordQueue.shift();
-    if (currentAssistantMessage) {
-        currentAssistantMessage.textContent += word;
-    }
-    const delay = word.trim() ? 60 : 20;
-    setTimeout(drainWordQueue, delay);
+    return new Promise((resolve) => {
+        const done = () => {
+            clearTimeout(timeoutId);
+            audio.removeEventListener("loadedmetadata", done);
+            resolve();
+        };
+        const timeoutId = setTimeout(done, 2000);
+        audio.addEventListener("loadedmetadata", done);
+    });
 }
 
 export async function sendAudioToServer() {
@@ -198,8 +195,9 @@ export async function sendAudioToServer() {
             // Continue processing if duration check fails
         }
 
-        currentAssistantMessage = null;
+        currentAssistantText = "";
         currentUserText = null;
+        resetCaptions();
 
         // Create a promise that will resolve when the worker sends back audio
         const workerResponse = new Promise((resolve, reject) => {
@@ -212,10 +210,7 @@ export async function sendAudioToServer() {
                         appendChatMessage("user", data.text);
                         break;
                     case "TEXT_DELTA":
-                        if (!currentAssistantMessage) {
-                            currentAssistantMessage = appendChatMessage("assistant", "");
-                        }
-                        enqueueWords(data.delta);
+                        currentAssistantText += data.delta;
                         break;
                     case "SYNTHESIZING":
                         {
@@ -228,21 +223,13 @@ export async function sendAudioToServer() {
                         break;
                     case "DONE":
                         {
-                            // Flush remaining words immediately
-                            if (currentAssistantMessage && wordQueue.length > 0) {
-                                currentAssistantMessage.textContent += wordQueue.join('');
-                                wordQueue = [];
-                                isAnimatingWords = false;
-                            }
-                            const assistantText = currentAssistantMessage ? currentAssistantMessage.textContent : null;
-                            if (currentUserText && assistantText) {
+                            if (currentUserText && currentAssistantText) {
                                 appState.state.chatHistory.push(
                                     { role: 'user', content: currentUserText },
-                                    { role: 'assistant', content: assistantText }
+                                    { role: 'assistant', content: currentAssistantText }
                                 );
                                 appState.state.chatHistory = appState.state.chatHistory.slice(-5);
                             }
-                            currentAssistantMessage = null;
                             currentUserText = null;
                         }
                         break;
@@ -259,7 +246,7 @@ export async function sendAudioToServer() {
                         appState.state.isRecording = false;
                         appState.domElements.pttButton.disabled = true;
                         appState.domElements.pttButton.classList.remove("recording");
-                        currentAssistantMessage = null;
+                        resetCaptions();
                         console.error("Error processing audio:", error);
                         reject(new Error(error.message || error));
                         break;
@@ -284,6 +271,16 @@ export async function sendAudioToServer() {
             appState.state.animation = result.mouthCues;
             const audioUrl = URL.createObjectURL(result.responseAudioBlob);
             audio.src = audioUrl;
+
+            // Sync the transcript with the voice: words are timed against the
+            // mouth cues the backend already computed for the lip sync.
+            await waitForAudioMetadata(audio);
+            const messageElement = appendChatMessage("assistant", "");
+            startCaptions(
+                messageElement,
+                buildCaptionSchedule(currentAssistantText, result.mouthCues, audio.duration)
+            );
+
             playAudio();
         }
 

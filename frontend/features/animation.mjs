@@ -1,8 +1,10 @@
 import appState from './state.mjs';
 import { IDLE_SHAPE_ID } from './state.mjs';
+import { updateCaptions, flushCaptions } from './captions.mjs';
 
 export function stopAnimation() {
     appState.state.isPlaying = false;
+    flushCaptions();
     const { mouthElement } = appState.domElements;
     
     mouthElement.classList.remove(`cue_${appState.state.previousCue}`);
@@ -17,6 +19,8 @@ export function animateShapes() {
 
     const { audio } = appState.domElements;
     const currentTime = audio.currentTime + 0.15;
+
+    updateCaptions(audio.currentTime);
 
     if (currentTime >= audio.duration) {
         stopAnimation();

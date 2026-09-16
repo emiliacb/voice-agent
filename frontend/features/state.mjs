@@ -35,6 +35,7 @@ class AppState {
                                 break;
 
                             case "isRecording":
+                                pttButton.classList.remove("loading");
                                 pttButton.classList.toggle("recording", value);
                                 pttButton.textContent = value ? i18n.recording : i18n.hold;
                                 pttButton.classList.toggle("idle", !value);
@@ -42,6 +43,9 @@ class AppState {
                                 break;
 
                             case "isLoading":
+                                // "loading" sizes the long status wordings so they
+                                // stay inside the button.
+                                pttButton.classList.toggle("loading", value);
                                 if (value) {
                                     pttButton.classList.remove("recording");
                                     pttButton.classList.remove("idle");
